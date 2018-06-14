@@ -99,12 +99,6 @@ namespace SIMD {
         }
         // FULL-CONSTR
         UME_FORCE_INLINE SIMDVec_f(float f0, float f1, float f2, float f3) {
-//            float32x2_t t0 = vdup_n_f32(f0);
-//            float32x2_t t1 = vset_lane_f32(f1, t0, 1);
-//            float32x2_t t2 = vdup_n_f32(f2);
-//            float32x2_t t3 = vset_lane_f32(f3, t2, 1);
-//            mVec = vcombine_f32(t1, t3);
-
             alignas(16) float tmp[4] = {f0, f1, f2, f3};
             mVec = vld1q_f32(tmp);
         }
@@ -997,17 +991,15 @@ namespace SIMD {
 //            return m0 && m1 && m2 && m3 && m4 && m5;
 //        }
 //        // HADD
-//        UME_FORCE_INLINE float hadd() const {
-//            return mVec[0] + mVec[1] + mVec[2] + mVec[3];
-//        }
+        UME_FORCE_INLINE float hadd() const {
+            return vaddvq_f32(mVec);
+        }
 //        // MHADD
-//        UME_FORCE_INLINE float hadd(SIMDVecMask<4> const & mask) const {
-//            float t0 = mask.mMask[0] ? mVec[0] : 0;
-//            float t1 = mask.mMask[1] ? mVec[1] : 0;
-//            float t2 = mask.mMask[2] ? mVec[2] : 0;
-//            float t3 = mask.mMask[3] ? mVec[3] : 0;
-//            return t0 + t1 + t2 + t3;
-//        }
+        UME_FORCE_INLINE float hadd(SIMDVecMask<4> const & mask) const {
+            float32x4_t tmp0 = vdupq_n_f32(0);
+            float32x4_t tmp = vbslq_f32(mask.mMask, tmp0, mVec);
+            return vaddvq_f32(tmp);
+        }
 //        // HADDS
 //        UME_FORCE_INLINE float hadd(float b) const {
 //            return mVec[0] + mVec[1] + mVec[2] + mVec[3] + b;
