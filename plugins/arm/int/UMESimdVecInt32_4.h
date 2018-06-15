@@ -199,7 +199,7 @@ namespace SIMD {
         // MSTORE
         UME_FORCE_INLINE int32_t* store(SIMDVecMask<4> const & mask, int32_t* p) const {
             int32x4_t t0 = vld1q_s32(p);
-            t0 = vbslq_s32(mask.mMask, t0, mVec);
+            t0 = vbslq_s32(mask.mMask, mVec, t0);
             vst1q_s32(p, t0);
             return p;
         }
@@ -211,20 +211,20 @@ namespace SIMD {
         // MSTOREA
         UME_FORCE_INLINE int32_t* storea(SIMDVecMask<4> const & mask, int32_t* p) const {
             int32x4_t t0 = vld1q_s32(p);
-            t0 = vbslq_s32(mask.mMask, t0, mVec);
+            t0 = vbslq_s32(mask.mMask, mVec, t0);
             vst1q_s32(p, t0);
             return p;
         }
         // BLENDV
         UME_FORCE_INLINE SIMDVec_i blend(SIMDVecMask<4> const & mask, SIMDVec_i const & b) const {
-            int32x4_t tmp = vbslq_s32(mask.mMask, b, mVec);
+            int32x4_t tmp = vbslq_s32(mask.mMask, b.mVec, mVec);
             return SIMDVec_i(tmp);
         }
         // BLENDS
         UME_FORCE_INLINE SIMDVec_i blend(SIMDVecMask<4> const & mask, int32_t b) const {
             int32x4_t tmp = vdupq_n_s32(b);
             int32x4_t tmp1 = vbslq_s32(mask.mMask, tmp, mVec);
-            return SIMDVec_i(tmp);
+            return SIMDVec_i(tmp1);
         }
         // SWIZZLE
         // SWIZZLEA
@@ -239,7 +239,7 @@ namespace SIMD {
         }
         // MADDV
         UME_FORCE_INLINE SIMDVec_i add(SIMDVecMask<4> const & mask, SIMDVec_i const & b) const {
-            int32x4_t t0 = vaddq_s32(mVec, b);
+            int32x4_t t0 = vaddq_s32(mVec, b.mVec);
 	    int32x4_t t1 = vbslq_s32(mask.mMask, t0, mVec);
             return SIMDVec_i(t1);
         }
@@ -269,7 +269,7 @@ namespace SIMD {
         }
         // MADDVA
         UME_FORCE_INLINE SIMDVec_i & adda(SIMDVecMask<4> const & mask, SIMDVec_i const & b) {
-            int32x4_t tmp = vaddq_s32(mVec, b);
+            int32x4_t tmp = vaddq_s32(mVec, b.mVec);
             mVec = vbslq_s32(mask.mMask, tmp, mVec);
             return *this;
         }
@@ -517,7 +517,7 @@ namespace SIMD {
         UME_FORCE_INLINE SIMDVec_i sub(SIMDVecMask<4> const & mask, int32_t b) const {
             int32x4_t tmp = vdupq_n_s32(b);
             int32x4_t tmp2 = vsubq_s32(mVec, tmp);
-            intt32x4_t tmp3 = vbslq_s32(mask.mMask, tmp2, mVec);
+            int32x4_t tmp3 = vbslq_s32(mask.mMask, tmp2, mVec);
             return SIMDVec_i(tmp3);
         }
         // SUBVA
@@ -798,6 +798,13 @@ namespace SIMD {
             mVec = vbslq_s32(mask.mMask, tmp2, mVec);
             return *this;
         }
+
+/* NO div for integers
+ * see https://community.arm.com/tools/f/discussions/930/division-with-neon
+ * vcvt.f32.u32  q0, q0
+ * vrecpe.f32        q0, q0
+ * vmul.f32    q0, q0, q1   @ q1 = 65536
+ * vcvt.u32.f32  q0, q0
         // DIVV
         UME_FORCE_INLINE SIMDVec_i div(SIMDVec_i const & b) const {
             int32x4_t t0 = vdivq_s32(mVec, b.mVec);
@@ -914,6 +921,8 @@ namespace SIMD {
             mVec = vbslq_s32(mask.mMask, tmp2, mVec);
             return *this;
         }
+NO div for integers
+*/
         // CMPEQV
         UME_FORCE_INLINE SIMDVecMask<4> cmpeq(SIMDVec_i const & b) const {
             uint32x4_t tmp = vceqq_s32(mVec, b.mVec);
@@ -1046,21 +1055,20 @@ namespace SIMD {
         // MHADD
         UME_FORCE_INLINE int32_t hadd(SIMDVecMask<4> const & mask) const {
             int32x4_t tmp0 = vdupq_n_s32(0);
-            int32x4_t tmp = vbslq_s32(mask.mMask, tmp0, mVec);
-            return vaddvq_f32(tmp);
-        } /*
+            int32x4_t tmp1 = vbslq_s32(mask.mMask, mVec, tmp0);
+            return vaddvq_s32(tmp1);
+        } 
         // HADDS
         UME_FORCE_INLINE int32_t hadd(int32_t b) const {
-            return mVec[0] + mVec[1] + mVec[2] + mVec[3] + b;
+            return vaddvq_s32(mVec) + b;
         }
         // MHADDS
         UME_FORCE_INLINE int32_t hadd(SIMDVecMask<4> const & mask, int32_t b) const {
-            int32_t t0 = mask.mMask[0] ? mVec[0] + b : b;
-            int32_t t1 = mask.mMask[1] ? mVec[1] + t0 : t0;
-            int32_t t2 = mask.mMask[2] ? mVec[2] + t1 : t1;
-            int32_t t3 = mask.mMask[3] ? mVec[3] + t2 : t2;
-            return t3;
+            int32x4_t tmp0 = vdupq_n_s32(0);
+            int32x4_t tmp1 = vbslq_s32(mask.mMask, mVec, tmp0);
+            return vaddvq_s32(tmp1) + b;
         }
+/*
         // HMUL
         UME_FORCE_INLINE int32_t hmul() const {
             return mVec[0] * mVec[1] * mVec[2] * mVec[3];
@@ -1320,7 +1328,7 @@ namespace SIMD {
 
         // BANDV
         UME_FORCE_INLINE SIMDVec_i band(SIMDVec_i const & b) const {
-            int32x4_t tmp = vandq_s32(mVec, b);
+            int32x4_t tmp = vandq_s32(mVec, b.mVec);
             return SIMDVec_i(tmp);
         }
         UME_FORCE_INLINE SIMDVec_i operator& (SIMDVec_i const & b) const {
@@ -1328,14 +1336,14 @@ namespace SIMD {
         }
         // MBANDV
         UME_FORCE_INLINE SIMDVec_i band(SIMDVecMask<4> const & mask, SIMDVec_i const & b) const {
-            int32x4_t tmp = vandq_s32(mVec, b);
+            int32x4_t tmp = vandq_s32(mVec, b.mVec);
             int32x4_t tmp2 = vbslq_s32(mask.mMask, tmp, mVec);
             return SIMDVec_i(tmp2);
         }
         // BANDS
         UME_FORCE_INLINE SIMDVec_i band(int32_t b) const {
             int32x4_t tmp = vdupq_n_s32(b);
-            int32x4_t tmp1 = vandq_s32(mVec, tmp1);
+            int32x4_t tmp1 = vandq_s32(mVec, tmp);
             return SIMDVec_i(tmp1);
         }
         UME_FORCE_INLINE SIMDVec_i operator& (int32_t b) const {
@@ -1344,13 +1352,13 @@ namespace SIMD {
         // MBANDS
         UME_FORCE_INLINE SIMDVec_i band(SIMDVecMask<4> const & mask, int32_t b) const {
             int32x4_t tmp = vdupq_n_s32(b);
-            int32x4_t tmp1 = vandq_s32(mVec, tmp1);
+            int32x4_t tmp1 = vandq_s32(mVec, tmp);
             int32x4_t tmp2 = vbslq_s32(mask.mMask, tmp1, mVec);
             return SIMDVec_i(tmp2);
         }
         // BANDVA
         UME_FORCE_INLINE SIMDVec_i & banda(SIMDVec_i const & b) {
-            mVec = vandq_s32(mVec, b);
+            mVec = vandq_s32(mVec, b.mVec);
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_i & operator&= (SIMDVec_i const & b) {
@@ -1358,8 +1366,8 @@ namespace SIMD {
         }
         // MBANDVA
         UME_FORCE_INLINE SIMDVec_i & banda(SIMDVecMask<4> const & mask, SIMDVec_i const & b) {
-            int32x4_t tmp = vandq_s32(mVec, b);
-            mVec = vbslq_s32(mask.mMask, b, mVec);
+            int32x4_t tmp = vandq_s32(mVec, b.mVec);
+            mVec = vbslq_s32(mask.mMask, tmp, mVec);
             return *this;
         }
         // BANDSA
@@ -1374,13 +1382,13 @@ namespace SIMD {
         // MBANDSA
         UME_FORCE_INLINE SIMDVec_i & banda(SIMDVecMask<4> const & mask, int32_t b) {
             int32x4_t tmp = vdupq_n_s32(b);
-            int32x4_t tmp1 = vandq_s32(mVec, tmp1);
+            int32x4_t tmp1 = vandq_s32(mVec, tmp);
             mVec = vbslq_s32(mask.mMask, tmp1, mVec);
             return *this;
         }
         // BORV
         UME_FORCE_INLINE SIMDVec_i bor(SIMDVec_i const & b) const {
-            int32x4_t tmp1 = vorrq_s32(mVec, b);
+            int32x4_t tmp1 = vorrq_s32(mVec, b.mVec);
             return SIMDVec_i(tmp1);
         }
         UME_FORCE_INLINE SIMDVec_i operator| (SIMDVec_i const & b) const {
@@ -1388,7 +1396,7 @@ namespace SIMD {
         }
         // MBORV
         UME_FORCE_INLINE SIMDVec_i bor(SIMDVecMask<4> const & mask, SIMDVec_i const & b) const {
-            int32x4_t tmp1 = vorrq_s32(mVec, b);
+            int32x4_t tmp1 = vorrq_s32(mVec, b.mVec);
             int32x4_t tmp2 = vbslq_s32(mask.mMask, tmp1, mVec);
             return SIMDVec_i(tmp2);
         }
@@ -1410,7 +1418,7 @@ namespace SIMD {
         }
         // BORVA
         UME_FORCE_INLINE SIMDVec_i & bora(SIMDVec_i const & b) {
-            mVec = vorrq_s32(mVec, b);
+            mVec = vorrq_s32(mVec, b.mVec);
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_i & operator|= (SIMDVec_i const & b) {
@@ -1418,7 +1426,7 @@ namespace SIMD {
         }
         // MBORVA
         UME_FORCE_INLINE SIMDVec_i & bora(SIMDVecMask<4> const & mask, SIMDVec_i const & b) {
-            int32x4_t tmp1 = vorrq_s32(mVec, b);
+            int32x4_t tmp1 = vorrq_s32(mVec, b.mVec);
             mVec = vbslq_s32(mask.mMask, tmp1, mVec);
             return *this;
         }
@@ -1440,17 +1448,17 @@ namespace SIMD {
         }
         // BXORV
         UME_FORCE_INLINE SIMDVec_i bxor(SIMDVec_i const & b) const {
-            int32x4_t tmp = veorq_s32(mVec, b);
-            int32x4_t tmp1 = vbslq_s32(mask.mMask, tmp, mVec);  
-            return SIMDVec_i(tmp1);
+            int32x4_t tmp = veorq_s32(mVec, b.mVec);
+            return SIMDVec_i(tmp);
         }
         UME_FORCE_INLINE SIMDVec_i operator^ (SIMDVec_i const & b) const {
             return bxor(b);
         }
         // MBXORV
         UME_FORCE_INLINE SIMDVec_i bxor(SIMDVecMask<4> const & mask, SIMDVec_i const & b) const {
-            int32x4_t tmp = veorq_s32(mVec, b);
-            return SIMDVec_i(tmp);
+            int32x4_t tmp = veorq_s32(mVec, b.mVec);
+            int32x4_t tmp1 = vbslq_s32(mask.mMask, tmp, mVec);  
+            return SIMDVec_i(tmp1);
         }
         // BXORS
         UME_FORCE_INLINE SIMDVec_i bxor(int32_t b) const {
@@ -1470,7 +1478,7 @@ namespace SIMD {
         }
         // BXORVA
         UME_FORCE_INLINE SIMDVec_i & bxora(SIMDVec_i const & b) {
-            mVec = veorq_s32(mVec, b);
+            mVec = veorq_s32(mVec, b.mVec);
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_i & operator^= (SIMDVec_i const & b) {
@@ -1478,7 +1486,7 @@ namespace SIMD {
         }
         // MBXORVA
         UME_FORCE_INLINE SIMDVec_i & bxora(SIMDVecMask<4> const & mask, SIMDVec_i const & b) {
-            int32x4_t tmp = veorq_s32(mVec, b);
+            int32x4_t tmp = veorq_s32(mVec, b.mVec);
             mVec = vbslq_s32(mask.mMask, tmp, mVec);
             return *this;
         }
@@ -1663,12 +1671,12 @@ namespace SIMD {
 
         // LSHV
         UME_FORCE_INLINE SIMDVec_i lsh(SIMDVec_i const & b) const {
-            int32x4_t tmp = vshlq_s32(mVec, b);
+            int32x4_t tmp = vshlq_s32(mVec, b.mVec);
             return SIMDVec_i(tmp);
         }
         // MLSHV
         UME_FORCE_INLINE SIMDVec_i lsh(SIMDVecMask<4> const & mask, SIMDVec_i const & b) const {
-            int32x4_t tmp = vshlq_s32(mVec, b);
+            int32x4_t tmp = vshlq_s32(mVec, b.mVec);
             int32x4_t tmp1 = vbslq_s32(mask.mMask, tmp, mVec);
             return SIMDVec_i(tmp1);
         }
@@ -1685,12 +1693,12 @@ namespace SIMD {
         }
         // LSHVA
         UME_FORCE_INLINE SIMDVec_i & lsha(SIMDVec_i const & b) {
-            mVec = vshlq_s32(mVec, b);
+            mVec = vshlq_s32(mVec, b.mVec);
             return *this;
         }
         // MLSHVA
         UME_FORCE_INLINE SIMDVec_i & lsha(SIMDVecMask<4> const & mask, SIMDVec_i const & b) {
-            int32x4_t tmp = vshlq_s32(mVec, b);
+            int32x4_t tmp = vshlq_s32(mVec, b.mVec);
             mVec = vbslq_s32(mask.mMask, tmp, mVec);
             return *this;
         }
@@ -1707,12 +1715,12 @@ namespace SIMD {
         }
         // RSHV
         UME_FORCE_INLINE SIMDVec_i rsh(SIMDVec_i const & b) const {
-            int32x4_t tmp = vshrq_s32(mVec, b);
+            int32x4_t tmp = vshlq_s32(mVec, -b.mVec);
             return SIMDVec_i(tmp);
         }
         // MRSHV
         UME_FORCE_INLINE SIMDVec_i rsh(SIMDVecMask<4> const & mask, SIMDVec_i const & b) const {
-            int32x4_t tmp = vshrq_s32(mVec, b);
+            int32x4_t tmp = vshlq_s32(mVec, -b.mVec);
             int32x4_t tmp1 = vbslq_s32(mask.mMask, tmp, mVec);
             return SIMDVec_i(tmp1);
         }
@@ -1729,12 +1737,12 @@ namespace SIMD {
         }
         // RSHVA
         UME_FORCE_INLINE SIMDVec_i & rsha(SIMDVec_i const & b) {
-            mVec = vshrq_s32(mVec, b);
+            mVec = vshlq_s32(mVec, -b.mVec);
             return *this;
         }
         // MRSHVA
         UME_FORCE_INLINE SIMDVec_i & rsha(SIMDVecMask<4> const & mask, SIMDVec_i const & b) {
-            int32x4_t tmp = vshrq_s32(mVec, b);
+            int32x4_t tmp = vshlq_s32(mVec, -b.mVec);
             mVec = vbslq_s32(mask.mMask, tmp, mVec);
             return *this;
         }

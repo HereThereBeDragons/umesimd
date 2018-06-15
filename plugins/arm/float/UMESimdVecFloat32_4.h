@@ -991,15 +991,15 @@ namespace SIMD {
 //            return m0 && m1 && m2 && m3 && m4 && m5;
 //        }
 //        // HADD
-        UME_FORCE_INLINE float hadd() const {
-            return vaddvq_f32(mVec);
-        }
+//        UME_FORCE_INLINE float hadd() const {
+//            return vaddvq_f32(mVec);
+//        }
 //        // MHADD
-        UME_FORCE_INLINE float hadd(SIMDVecMask<4> const & mask) const {
-            float32x4_t tmp0 = vdupq_n_f32(0);
-            float32x4_t tmp = vbslq_f32(mask.mMask, tmp0, mVec);
-            return vaddvq_f32(tmp);
-        }
+//        UME_FORCE_INLINE float hadd(SIMDVecMask<4> const & mask) const {
+//            float32x4_t tmp0 = vdupq_n_f32(0);
+//            float32x4_t tmp = vbslq_f32(mask.mMask, tmp0, mVec);
+//            return vaddvq_f32(tmp);
+//        }
 //        // HADDS
 //        UME_FORCE_INLINE float hadd(float b) const {
 //            return mVec[0] + mVec[1] + mVec[2] + mVec[3] + b;

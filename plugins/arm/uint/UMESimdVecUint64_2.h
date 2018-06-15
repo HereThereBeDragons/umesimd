@@ -57,6 +57,10 @@ namespace SIMD {
         friend class SIMDVec_f<double, 2>;
 
         friend class SIMDVec_u<uint64_t, 4>;
+
+        UME_FORCE_INLINE explicit SIMDVec_u(uint64x2_t const & x) {
+            this->mVec = x;
+        }
     public:
         constexpr static uint32_t length() { return 2; }
         constexpr static uint32_t alignment() { return 16; }
@@ -124,7 +128,7 @@ namespace SIMD {
 #endif
 
         // ASSIGNV
-        UME_FORCE_INLINE SIMDVec_u & operator= (SIMDVec_u const & b) {
+        UME_FORCE_INLINE SIMDVec_u & assign(SIMDVec_u const & b) {
             mVec = b.mVec;
             return *this;
         }
@@ -241,7 +245,7 @@ namespace SIMD {
         }
         // MADDS
         UME_FORCE_INLINE SIMDVec_u add(SIMDVecMask<2> const & mask, uint64_t b) const {
-            uint64x2_t tmp = vdupq_n_us64(b);
+            uint64x2_t tmp = vdupq_n_u64(b);
             uint64x2_t tmp2 = vaddq_u64(mVec, tmp);
             uint64x2_t tmp3 = vbslq_u64(mask.mMask, tmp2, mVec);
             return SIMDVec_u(tmp3);;
@@ -471,7 +475,8 @@ namespace SIMD {
             mVec = vbslq_u64(mask.mMask, tmp2, mVec);
             return *this;
         }
-        
+       
+/* NO 64bit integer mul, only 64bit float mul 
         // MULV
         UME_FORCE_INLINE SIMDVec_u mul(SIMDVec_u const & b) const {
             uint64x2_t t0 = vmulq_u64(mVec, b.mVec);
@@ -532,7 +537,15 @@ namespace SIMD {
             mVec = vbslq_u64(mask.mMask, tmp2, mVec);
             return *this;
         }
-        
+NO 64bit integer mul, only 64bit float        
+*/
+
+/* NO integer div in neon
+ * see https://community.arm.com/tools/f/discussions/930/division-with-neon
+ * vcvt.f32.u32  q0, q0
+ * vrecpe.f32        q0, q0
+ * vmul.f32    q0, q0, q1   @ q1 = 65536
+ * vcvt.u32.f32  q0, q0
         // DIVV
         UME_FORCE_INLINE SIMDVec_u div(SIMDVec_u const & b) const {
             uint64x2_t t0 = vdivq_u64(mVec, b.mVec);
@@ -642,7 +655,9 @@ namespace SIMD {
             mVec = vbslq_u64(mask.mMask, tmp2, mVec);
             return *this;
         }
-        
+* NO integer div in neon
+* see https://community.arm.com/tools/f/discussions/930/division-with-neon
+*/
         // CMPEQV
         UME_FORCE_INLINE SIMDVecMask<2> cmpeq (SIMDVec_u const & b) const {
             uint64x2_t tmp = vceqq_u64(mVec, b.mVec);
@@ -762,24 +777,31 @@ namespace SIMD {
         }
         
         // UNIQUE
-        // HADD
+//        // HADD
         UME_FORCE_INLINE uint64_t hadd() const {
             return vaddvq_u64(mVec);    
         }
         // MHADD
         UME_FORCE_INLINE uint64_t hadd(SIMDVecMask<2> const & mask) const {
             uint64x2_t tmp0 = vdupq_n_u64(0);
-            uint64x2_t tmp = vbslq_u64(mask.mMask, tmp0, mVec);
+            uint64x2_t tmp = vbslq_u64(mask.mMask, mVec, tmp0);
             return vaddvq_u64(tmp);
-        
-        
+        }       
         // HADDS
+         UME_FORCE_INLINE uint64_t hadd(uint64_t b) const {
+            return vaddvq_u64(mVec) + b;
+         }
         // MHADDS
+        UME_FORCE_INLINE uint64_t hadd(SIMDVecMask<2> const & mask, uint64_t b) const {
+            uint64x2_t tmp0 = vdupq_n_u64(0);
+            uint64x2_t tmp = vbslq_u64(mask.mMask, mVec, tmp0);
+            return vaddvq_u64(tmp) + b;
+         }
         // HMUL
         // MHMUL
         // HMULS
         // MHMULS
-
+/* no direct functions 
         // FMULADDV
         UME_FORCE_INLINE SIMDVec_u fmuladd(SIMDVec_u const & b, SIMDVec_u const & c) const {
             uint64x2_t tmp = vfmaq_u64(c.mVec, mVec, b.mVec);
@@ -830,7 +852,10 @@ namespace SIMD {
             uint64x2_t tmp3 = vbslq_u64(mask.mMask, tmp2, mVec);
             return SIMDVec_u(tmp3);
         }
-  
+  no direct functions
+*/
+
+/* no min/max 64bit int, only 64bit float
         // MAXV
         UME_FORCE_INLINE SIMDVec_u max(SIMDVec_u const & b) const {
             uint64x2_t tmp = vmaxq_u64(mVec, b.mVec);
@@ -914,7 +939,8 @@ namespace SIMD {
             mVec = vbslq_u64(mask.mMask, tmp, mVec);
             return *this;
         }
-        
+ no min/max for 64bit int, only 64bit float       
+*/
         // MINSA
         // MMINSA
         // HMAX
@@ -928,7 +954,7 @@ namespace SIMD {
 
         // BANDV
         UME_FORCE_INLINE SIMDVec_u band(SIMDVec_u const & b) const {
-            uint64x2_t tmp = vandq_u64(mVec, b);
+            uint64x2_t tmp = vandq_u64(mVec, b.mVec);
             return SIMDVec_u(tmp);
         }
         UME_FORCE_INLINE SIMDVec_u operator& (SIMDVec_u const & b) const {
@@ -936,14 +962,14 @@ namespace SIMD {
         }
         // MBANDV
         UME_FORCE_INLINE SIMDVec_u band(SIMDVecMask<2> const & mask, SIMDVec_u const & b) const {
-            uint64x2_t tmp = vandq_u64(mVec, b);
+            uint64x2_t tmp = vandq_u64(mVec, b.mVec);
             uint64x2_t tmp2 = vbslq_u64(mask.mMask, tmp, mVec);
             return SIMDVec_u(tmp2);
         }
         // BANDS
         UME_FORCE_INLINE SIMDVec_u band(uint64_t b) const {
             uint64x2_t tmp = vdupq_n_u64(b);
-            uint64x2_t tmp1 = vandq_u64(mVec, tmp1);
+            uint64x2_t tmp1 = vandq_u64(mVec, tmp);
             return SIMDVec_u(tmp1);
         }
         UME_FORCE_INLINE SIMDVec_u operator& (uint64_t b) const {
@@ -952,13 +978,13 @@ namespace SIMD {
         // MBANDS
         UME_FORCE_INLINE SIMDVec_u band(SIMDVecMask<2> const & mask, uint64_t b) const {
             uint64x2_t tmp = vdupq_n_u64(b);
-            uint64x2_t tmp1 = vandq_u64(mVec, tmp1);
+            uint64x2_t tmp1 = vandq_u64(mVec, tmp);
             uint64x2_t tmp2 = vbslq_u64(mask.mMask, tmp1, mVec);
             return SIMDVec_u(tmp2);
         }
         // BANDVA
         UME_FORCE_INLINE SIMDVec_u & banda(SIMDVec_u const & b) {
-            mVec = vandq_u64(mVec, b);
+            mVec = vandq_u64(mVec, b.mVec);
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_u & operator&= (SIMDVec_u const & b) {
@@ -966,8 +992,8 @@ namespace SIMD {
         }
         // MBANDVA
         UME_FORCE_INLINE SIMDVec_u & banda(SIMDVecMask<2> const & mask, SIMDVec_u const & b) {
-            uint64x2_t tmp = vandq_u64(mVec, b);
-            mVec = vbslq_u64(mask.mMask, b, mVec);
+            uint64x2_t tmp = vandq_u64(mVec, b.mVec);
+            mVec = vbslq_u64(mask.mMask, tmp, mVec);
             return *this;
         }
         // BANDSA
@@ -982,13 +1008,13 @@ namespace SIMD {
         // MBANDSA
         UME_FORCE_INLINE SIMDVec_u & banda(SIMDVecMask<2> const & mask, uint64_t b) {
             uint64x2_t tmp = vdupq_n_u64(b);
-            uint64x2_t tmp1 = vandq_u64(mVec, tmp1);
+            uint64x2_t tmp1 = vandq_u64(mVec, tmp);
             mVec = vbslq_u64(mask.mMask, tmp1, mVec);
             return *this;
         }
         // BORV
         UME_FORCE_INLINE SIMDVec_u bor(SIMDVec_u const & b) const {
-            uint64x2_t tmp1 = vorrq_u64(mVec, b);
+            uint64x2_t tmp1 = vorrq_u64(mVec, b.mVec);
             return SIMDVec_u(tmp1);
         }
         UME_FORCE_INLINE SIMDVec_u operator| (SIMDVec_u const & b) const {
@@ -996,7 +1022,7 @@ namespace SIMD {
         }
         // MBORV
         UME_FORCE_INLINE SIMDVec_u bor(SIMDVecMask<2> const & mask, SIMDVec_u const & b) const {
-            uint64x2_t tmp1 = vorrq_u64(mVec, b);
+            uint64x2_t tmp1 = vorrq_u64(mVec, b.mVec);
             uint64x2_t tmp2 = vbslq_u64(mask.mMask, tmp1, mVec);
             return SIMDVec_u(tmp2);
         }
@@ -1018,7 +1044,7 @@ namespace SIMD {
         }
         // BORVA
         UME_FORCE_INLINE SIMDVec_u & bora(SIMDVec_u const & b) {
-            mVec = vorrq_u64(mVec, b);
+            mVec = vorrq_u64(mVec, b.mVec);
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_u & operator|= (SIMDVec_u const & b) {
@@ -1026,7 +1052,7 @@ namespace SIMD {
         }
         // MBORVA
         UME_FORCE_INLINE SIMDVec_u & bora(SIMDVecMask<2> const & mask, SIMDVec_u const & b) {
-            uint64x2_t tmp1 = vorrq_u64(mVec, b);
+            uint64x2_t tmp1 = vorrq_u64(mVec, b.mVec);
             mVec = vbslq_u64(mask.mMask, tmp1, mVec);
             return *this;
         }
@@ -1048,17 +1074,17 @@ namespace SIMD {
         }
         // BXORV
         UME_FORCE_INLINE SIMDVec_u bxor(SIMDVec_u const & b) const {
-            uint64x2_t tmp = veorq_u64(mVec, b);
-            uint64x2_t tmp1 = vbslq_u64(mask.mMask, tmp, mVec);  
-            return SIMDVec_u(tmp1);
+            uint64x2_t tmp = veorq_u64(mVec, b.mVec);
+            return SIMDVec_u(tmp);
         }
         UME_FORCE_INLINE SIMDVec_u operator^ (SIMDVec_u const & b) const {
             return bxor(b);
         }
         // MBXORV
         UME_FORCE_INLINE SIMDVec_u bxor(SIMDVecMask<2> const & mask, SIMDVec_u const & b) const {
-            uint64x2_t tmp = veorq_u64(mVec, b);
-            return SIMDVec_u(tmp);
+            uint64x2_t tmp = veorq_u64(mVec, b.mVec);
+            uint64x2_t tmp1 = vbslq_u64(mask.mMask, tmp, mVec);  
+            return SIMDVec_u(tmp1);
         }
         // BXORS
         UME_FORCE_INLINE SIMDVec_u bxor(uint64_t b) const {
@@ -1078,7 +1104,7 @@ namespace SIMD {
         }
         // BXORVA
         UME_FORCE_INLINE SIMDVec_u & bxora(SIMDVec_u const & b) {
-            mVec = veorq_u64(mVec, b);
+            mVec = veorq_u64(mVec, b.mVec);
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_u & operator^= (SIMDVec_u const & b) {
@@ -1086,7 +1112,7 @@ namespace SIMD {
         }
         // MBXORVA
         UME_FORCE_INLINE SIMDVec_u & bxora(SIMDVecMask<2> const & mask, SIMDVec_u const & b) {
-            uint64x2_t tmp = veorq_u64(mVec, b);
+            uint64x2_t tmp = veorq_u64(mVec, b.mVec);
             mVec = vbslq_u64(mask.mMask, tmp, mVec);
             return *this;
         }
@@ -1108,7 +1134,7 @@ namespace SIMD {
         }
         // BNOT
         UME_FORCE_INLINE SIMDVec_u bnot() const {
-            uint64x2_t tmp = vmvnq_u64(mVec);
+            uint64x2_t tmp = vreinterpretq_u64_u32(vmvnq_u32(vreinterpretq_u32_u64(mVec)));
             return SIMDVec_u(tmp);
         }
         UME_FORCE_INLINE SIMDVec_u operator~ () const {
@@ -1116,18 +1142,18 @@ namespace SIMD {
         }
         // MBNOT
         UME_FORCE_INLINE SIMDVec_u bnot(SIMDVecMask<2> const & mask) const {
-            uint64x2_t tmp = vmvnq_u64(mVec);
+            uint64x2_t tmp = vreinterpretq_u64_u32(vmvnq_u32(vreinterpretq_u32_u64(mVec)));
             uint64x2_t tmp1 = vbslq_u64(mask.mMask, tmp, mVec);
             return SIMDVec_u(tmp1);
         }
         // BNOTA
         UME_FORCE_INLINE SIMDVec_u & bnota() {
-            mVec = vmvnq_u64(mVec);
+            mVec = vreinterpretq_u64_u32(vmvnq_u32(vreinterpretq_u32_u64(mVec)));
             return *this;
         }
         // MBNOTA
         UME_FORCE_INLINE SIMDVec_u & bnota(SIMDVecMask<2> const & mask) {
-            uint64x2_t tmp = vmvnq_u64(mVec);
+            uint64x2_t tmp = vreinterpretq_u64_u32(vmvnq_u32(vreinterpretq_u32_u64(mVec)));
             mVec = vbslq_u64(mask.mMask, tmp, mVec);
             return *this;
         }
@@ -1153,15 +1179,18 @@ namespace SIMD {
         // MSCATTERS
         // SCATTERV
         // MSCATTERV
-        
+/*
+ * /opt/gcc-7.2.0/lib/gcc/aarch64-unknown-linux-gnu/7.2.0/include/arm_neon.h:26222:50: internal compiler error: Segmentation fault
+   return (uint64x2_t) __builtin_aarch64_lshrv2di ((int64x2_t) __a, __b);
+       
         // LSHV
         UME_FORCE_INLINE SIMDVec_u lsh(SIMDVec_u const & b) const {
-            uint64x2_t tmp = vshlq_u64(mVec, b);
+            uint64x2_t tmp = vshlq_u64(mVec, vreinterpretq_s64_u64(b.mVec));
             return SIMDVec_u(tmp);
         }
         // MLSHV
         UME_FORCE_INLINE SIMDVec_u lsh(SIMDVecMask<2> const & mask, SIMDVec_u const & b) const {
-            uint64x2_t tmp = vshlq_u64(mVec, b);
+            uint64x2_t tmp = vshlq_u64(mVec, vreinterpretq_s64_u64(b.mVec));
 	    uint64x2_t tmp1 = vbslq_u64(mask.mMask, tmp, mVec);
             return SIMDVec_u(tmp1);
         }
@@ -1178,12 +1207,12 @@ namespace SIMD {
         }
         // LSHVA
         UME_FORCE_INLINE SIMDVec_u & lsha(SIMDVec_u const & b) {
-            mVec = vshlq_u64(mVec, b);
+            mVec = vshlq_u64(mVec, vreinterpretq_s64_u64(b.mVec));
             return *this;
         }
         // MLSHVA
         UME_FORCE_INLINE SIMDVec_u & lsha(SIMDVecMask<2> const & mask, SIMDVec_u const & b) {
-            uint64x2_t tmp = vshlq_u64(mVec, b);
+            uint64x2_t tmp = vshlq_u64(mVec, vreinterpretq_s64_u64(b.mVec));
             mVec = vbslq_u64(mask.mMask, tmp, mVec);
             return *this;
         }
@@ -1200,12 +1229,12 @@ namespace SIMD {
         }
         // RSHV
         UME_FORCE_INLINE SIMDVec_u rsh(SIMDVec_u const & b) const {
-            uint64x2_t tmp = vshrq_u64(mVec, b);
+            uint64x2_t tmp = vshlq_u64(mVec, -(vreinterpretq_s64_u64(b.mVec)));
             return SIMDVec_u(tmp);
         }
         // MRSHV
         UME_FORCE_INLINE SIMDVec_u rsh(SIMDVecMask<2> const & mask, SIMDVec_u const & b) const {
-            uint64x2_t tmp = vshrq_u64(mVec, b);
+            uint64x2_t tmp = vshlq_u64(mVec, -(vreinterpretq_s64_u64(b.mVec)));
             uint64x2_t tmp1 = vbslq_u64(mask.mMask, tmp, mVec);
             return SIMDVec_u(tmp1);
         }
@@ -1222,12 +1251,12 @@ namespace SIMD {
         }
         // RSHVA
         UME_FORCE_INLINE SIMDVec_u & rsha(SIMDVec_u const & b) {
-            mVec = vshrq_u64(mVec, b);
+            mVec = vshlq_u64(mVec, -(vreinterpretq_s64_u64(b.mVec)));
             return *this;
         }
         // MRSHVA
         UME_FORCE_INLINE SIMDVec_u & rsha(SIMDVecMask<2> const & mask, SIMDVec_u const & b) {
-            uint64x2_t tmp = vshrq_u64(mVec, b);
+            uint64x2_t tmp = vshlq_u64(mVec, -(vreinterpretq_s64_u64(b.mVec)));
             mVec = vbslq_u64(mask.mMask, tmp, mVec);
             return *this;
         }
@@ -1242,7 +1271,7 @@ namespace SIMD {
             mVec = vbslq_u64(mask.mMask, tmp, mVec);
             return *this;
         }
-        
+   */     
         // ROLV
         // MROLV
         // ROLS
