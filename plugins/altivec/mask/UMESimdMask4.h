@@ -70,25 +70,25 @@ namespace SIMD {
         // Regardless of the mask representation, the interface should only allow initialization using 
         // standard bool or using equivalent mask
         UME_FORCE_INLINE SIMDVecMask(bool m) {
-            mMask = (m == true) ? vec_splat_u32(0xFFFFFFFF) : vec_splat_u32(0);
+            mMask = (m == true) ? vec_splat_u32(TRUE_VAL()) : vec_splat_u32(FALSE_VAL());
         }
 
         // LOAD-CONSTR - Construct by loading from memory
         UME_FORCE_INLINE explicit SIMDVecMask(bool const * p) {
             alignas(16) uint32_t raw[4];
-            raw[0] = (p[0] == true) ? 0xFFFFFFFF : 0;
-            raw[1] = (p[1] == true) ? 0xFFFFFFFF : 0;
-            raw[2] = (p[2] == true) ? 0xFFFFFFFF : 0;
-            raw[3] = (p[3] == true) ? 0xFFFFFFFF : 0;
+            raw[0] = (p[0] == true) ? TRUE_VAL() : FALSE_VAL();
+            raw[1] = (p[1] == true) ? TRUE_VAL() : FALSE_VAL();
+            raw[2] = (p[2] == true) ? TRUE_VAL() : FALSE_VAL();
+            raw[3] = (p[3] == true) ? TRUE_VAL() : FALSE_VAL();
             mMask = vec_ld(0, raw);
         }
 
         UME_FORCE_INLINE SIMDVecMask(bool m0, bool m1, bool m2, bool m3) {
             alignas(16) uint32_t raw[4];
-            raw[0] = (m0 == true) ? 0xFFFFFFFF : 0;
-            raw[1] = (m1 == true) ? 0xFFFFFFFF : 0;
-            raw[2] = (m2 == true) ? 0xFFFFFFFF : 0;
-            raw[3] = (m3 == true) ? 0xFFFFFFFF : 0;
+            raw[0] = (m0 == true) ? TRUE_VAL() : FALSE_VAL();
+            raw[1] = (m1 == true) ? TRUE_VAL() : FALSE_VAL();
+            raw[2] = (m2 == true) ? TRUE_VAL() : FALSE_VAL();
+            raw[3] = (m3 == true) ? TRUE_VAL() : FALSE_VAL();
             mMask = vec_ld(0, raw);
         }
 
@@ -97,12 +97,12 @@ namespace SIMD {
         }
 
         UME_FORCE_INLINE bool extract(uint32_t index) const {
-            return ((unsigned int*)&mMask)[index] != 0;
+            return ((uin32_t*)&mMask)[index] != FALSE_VAL();
         }
 
         // A non-modifying element-wise access operator
         UME_FORCE_INLINE bool operator[] (uint32_t index) const {
-            return mMask[index];
+            return extract(index);
         }
 
         // Element-wise modification operator
