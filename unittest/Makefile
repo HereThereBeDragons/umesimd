@@ -118,7 +118,7 @@ ifeq ($(ISA), arm)
     endif
 endif
 ifeq ($(ISA), altivec)
-	CXXFLAGS+=-mfloat128 -mtune=native -mcpu=native -maltivec -mvsx -mabi=altivec
+	CXXFLAGS+=-mfloat128 -mtune=native -mcpu=native -maltivec -mvsx -mabi=altivec -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-attributes
 	ISA_PREFIX+=_altivec
 endif
 
