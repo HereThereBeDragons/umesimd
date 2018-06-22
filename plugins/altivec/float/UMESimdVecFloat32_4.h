@@ -35,8 +35,6 @@
 
 #include "../../../UMESimdInterface.h"
 
-#define SET_F32(x, a) { alignas(16) const float setf32_array[4] = {a, a, a, a}; \
-                             x = (__vector float) vec_ld(0, setf32_array); }
 #define MASK_TO_VEC(x, mask) { alignas(16) uint32_t mask_to_vec_array[4] = { (mask.mMask[0] ? 0xFFFFFFFF : 0), (mask.mMask[1] ? 0xFFFFFFFF : 0), (mask.mMask[2] ? 0xFFFFFFFF : 0), (mask.mMask[3] ? 0xFFFFFFFF : 0)}; \
                              x = (__vector uint32_t) vec_ld(0, mask_to_vec_array); }
 
@@ -79,7 +77,7 @@ namespace SIMD {
         UME_FORCE_INLINE SIMDVec_f() {}
         // SET-CONSTR
         UME_FORCE_INLINE SIMDVec_f(float f) {
-            SET_F32(mVec, f);
+            mVec = vec_splats(f);
         }
         // This constructor is used to force types other than SCALAR_TYPES
         // to be promoted to SCALAR_TYPE instead of SCALAR_TYPE*. This prevents
@@ -151,7 +149,7 @@ namespace SIMD {
         }
         // ASSIGNS
         UME_FORCE_INLINE SIMDVec_f & assign(float b) {
-            SET_F32(mVec, b);
+            mVec = vec_splats(b); 
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_f & operator= (float b) {
@@ -159,8 +157,7 @@ namespace SIMD {
         }
         // MASSIGNS
         UME_FORCE_INLINE SIMDVec_f & assign(SIMDVecMask<4> const & mask, float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
@@ -287,8 +284,7 @@ namespace SIMD {
         }
         // ADDS
         UME_FORCE_INLINE SIMDVec_f add(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_add(mVec, t0);
             return SIMDVec_f(t1);
         }
@@ -297,8 +293,7 @@ namespace SIMD {
         }
         // MADDS
         UME_FORCE_INLINE SIMDVec_f add(SIMDVecMask<4> const & mask, float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_add(mVec, t0);
             __vector float t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_f(t2);
@@ -319,8 +314,7 @@ namespace SIMD {
         }
         // ADDSA
         UME_FORCE_INLINE SIMDVec_f & adda(float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             mVec = vec_add(mVec, t0);
             return *this;
         }
@@ -329,8 +323,7 @@ namespace SIMD {
         }
         // MADDSA
         UME_FORCE_INLINE SIMDVec_f & adda(SIMDVecMask<4> const & mask, float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_add(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -443,8 +436,7 @@ namespace SIMD {
         } */
         // POSTINC
         UME_FORCE_INLINE SIMDVec_f postinc() {
-            __vector float t0;
-            SET_F32(t0, 1.0);
+            __vector float t0 = vec_splats(1.0f);
             __vector float t1 = mVec;
             mVec = vec_add(mVec, t0);
             return SIMDVec_f(t1);
@@ -454,8 +446,7 @@ namespace SIMD {
         }
         // MPOSTINC
         UME_FORCE_INLINE SIMDVec_f postinc(SIMDVecMask<4> const & mask) {
-            __vector float t0;
-            SET_F32(t0, 1.0);
+            __vector float t0 = vec_splats(1.0f);
             __vector float t1 = mVec;
             __vector float t2 = vec_add(mVec, t0);
             mVec = vec_sel(mVec, t2, mask.mMask);
@@ -463,8 +454,7 @@ namespace SIMD {
         }
         // PREFINC
         UME_FORCE_INLINE SIMDVec_f & prefinc() {
-            __vector float t0;
-            SET_F32(t0, 1.0);
+            __vector float t0 = vec_splats(1.0f);
             mVec = vec_add(mVec, t0);
             return *this;
         }
@@ -473,8 +463,7 @@ namespace SIMD {
         }
         // MPREFINC
         UME_FORCE_INLINE SIMDVec_f & prefinc(SIMDVecMask<4> const & mask) {
-            __vector float t0;
-            SET_F32(t0, 1.0);
+            __vector float t0 = vec_splats(1.0f);
             __vector float t1 = vec_add(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -495,8 +484,7 @@ namespace SIMD {
         }
         // SUBS
         UME_FORCE_INLINE SIMDVec_f sub(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_sub(mVec, t0);
             return SIMDVec_f(t1);
         }
@@ -505,8 +493,7 @@ namespace SIMD {
         }
         // MSUBS
         UME_FORCE_INLINE SIMDVec_f sub(SIMDVecMask<4> const & mask, float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_sub(mVec, t0);
             __vector float t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_f(t2);
@@ -527,8 +514,7 @@ namespace SIMD {
         }
         // SUBSA
         UME_FORCE_INLINE SIMDVec_f & suba(float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             mVec = vec_sub(mVec, t0);
             return *this;
         }
@@ -537,8 +523,7 @@ namespace SIMD {
         }
         // MSUBSA
         UME_FORCE_INLINE SIMDVec_f & suba(SIMDVecMask<4> const & mask, float b) {
-            __vector float tmp;
-            SET_F32(tmp, b);
+            __vector float tmp = vec_splats(b);
             __vector float tmp2 = vec_sub(mVec, tmp);
             mVec= vec_sel(mVec, tmp2, mask.mMask);
             return *this;
@@ -662,15 +647,13 @@ namespace SIMD {
         }
         // SUBFROMS
         UME_FORCE_INLINE SIMDVec_f subfrom(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_sub(t0, mVec);
             return SIMDVec_f(t1);
         }
         // MSUBFROMS
         UME_FORCE_INLINE SIMDVec_f subfrom(SIMDVecMask<4> const & mask, float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_sub(t0, mVec);
             __vector float t3 = vec_sel(t0, t1, mask.mMask);
             return SIMDVec_f(t3);
@@ -688,23 +671,20 @@ namespace SIMD {
         }
         // SUBFROMSA
         UME_FORCE_INLINE SIMDVec_f & subfroma(float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             mVec = vec_sub(t0, mVec);
             return *this;
         }
         // MSUBFROMSA
         UME_FORCE_INLINE SIMDVec_f & subfroma(SIMDVecMask<4> const & mask, float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_sub(t0, mVec);
             mVec = vec_sel(t0, t1, mask.mMask);
             return *this;
         }
         // POSTDEC
         UME_FORCE_INLINE SIMDVec_f postdec() {
-            __vector float t0;
-            SET_F32(t0, 1.0f);
+            __vector float t0 = vec_splats(1.0f);
             __vector float t1 = mVec;
             mVec = vec_sub(mVec, t0);
             return SIMDVec_f(t1);
@@ -714,8 +694,7 @@ namespace SIMD {
         }
         // MPOSTDEC
         UME_FORCE_INLINE SIMDVec_f postdec(SIMDVecMask<4> const & mask) {
-            __vector float t0;
-            SET_F32(t0, 1.0f);
+            __vector float t0 = vec_splats(1.0f);
             __vector float t1 = mVec;
             __vector float t2 = vec_sub(mVec, t0);
             mVec = vec_sel(mVec, t2, mask.mMask);
@@ -723,8 +702,7 @@ namespace SIMD {
         }
         // PREFDEC
         UME_FORCE_INLINE SIMDVec_f & prefdec() {
-            __vector float t0;
-            SET_F32(t0, 1.0f);
+            __vector float t0 = vec_splats(1.0f);
             mVec = vec_sub(mVec, t0);
             return *this;
         }
@@ -733,8 +711,7 @@ namespace SIMD {
         }
         // MPREFDEC
         UME_FORCE_INLINE SIMDVec_f & prefdec(SIMDVecMask<4> const & mask) {
-            __vector float t0;
-            SET_F32(t0, 1.0);
+            __vector float t0 = vec_splats(1.0f);
             __vector float t1 = vec_sub(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -755,8 +732,7 @@ namespace SIMD {
         }
         // MULS
         UME_FORCE_INLINE SIMDVec_f mul(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = mVec * t0;
             return SIMDVec_f(t1);
         }
@@ -765,8 +741,7 @@ namespace SIMD {
         }
         // MMULS
         UME_FORCE_INLINE SIMDVec_f mul(SIMDVecMask<4> const & mask, float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_mul(mVec, t0);
             __vector float t3 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_f(t3);
@@ -787,8 +762,7 @@ namespace SIMD {
         }
         // MULSA
         UME_FORCE_INLINE SIMDVec_f & mula(float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             mVec = vec_mul(mVec, t0);
             return *this;
         }
@@ -797,8 +771,7 @@ namespace SIMD {
         }
         // MMULSA
         UME_FORCE_INLINE SIMDVec_f & mula(SIMDVecMask<4> const & mask, float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_mul(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -819,8 +792,7 @@ namespace SIMD {
         }
         // DIVS
         UME_FORCE_INLINE SIMDVec_f div(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_div(mVec, t0);
             return SIMDVec_f(t1);
         }
@@ -829,8 +801,7 @@ namespace SIMD {
         }
         // MDIVS
         UME_FORCE_INLINE SIMDVec_f div(SIMDVecMask<4> const & mask, float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_div(mVec, t0);
             __vector float t3 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_f(t3);
@@ -851,8 +822,7 @@ namespace SIMD {
         }
         // DIVSA
         UME_FORCE_INLINE SIMDVec_f & diva(float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             mVec = vec_div(mVec, t0);
             return *this;
         }
@@ -861,8 +831,7 @@ namespace SIMD {
         }
         // MDIVSA
         UME_FORCE_INLINE SIMDVec_f & diva(SIMDVecMask<4> const & mask, float b) {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_div(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -870,16 +839,14 @@ namespace SIMD {
         // RCP
         UME_FORCE_INLINE SIMDVec_f rcp() const {
             //__vector double t0 = vec_recip(SET_F64(1.0), mVec);
-            __vector float t0;
-            SET_F32(t0, 1.0);
+            __vector float t0 = vec_splats(1.0f);
             __vector float t1 = vec_div(t0, mVec);
             return SIMDVec_f(t1);
         }
         // MRCP
         UME_FORCE_INLINE SIMDVec_f rcp(SIMDVecMask<4> const & mask) const {
             //__vector double t0 = vec_recip(SET_F64(1.0), mVec);
-            __vector float t0;
-            SET_F32(t0, 1.0);
+            __vector float t0 = vec_splats(1.0f);
             __vector float t1 = vec_div(t0, mVec);
             __vector float t3 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_f(t3);
@@ -887,16 +854,14 @@ namespace SIMD {
         // RCPS
         UME_FORCE_INLINE SIMDVec_f rcp(float b) const {
             //__vector double t0 = vec_recip(SET_F64(b), mVec);
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_div(t0, mVec);
             return SIMDVec_f(t1);
         }
         // MRCPS
         UME_FORCE_INLINE SIMDVec_f rcp(SIMDVecMask<4> const & mask, float b) const {
             //__vector double t0 = vec_recip(SET_F64(b), mVec);
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_div(t0, mVec);
             __vector float t3 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_f(t3);
@@ -904,33 +869,29 @@ namespace SIMD {
        // RCPA
        UME_FORCE_INLINE SIMDVec_f & rcpa() {
            //__vector double t0 = vec_recip(SET_F64(1.0), mVec);
-            __vector float t0;
-            SET_F32(t0, 1.0);
+            __vector float t0 = vec_splats(1.0f);
             mVec = vec_div(t0, mVec);
             return *this;
        }
        // MRCPA
        UME_FORCE_INLINE SIMDVec_f & rcpa(SIMDVecMask<4> const & mask) {
            //__vector double t0 = vec_recip(SET_F64(1.0), mVec);
-            __vector float t0;
-            SET_F32(t0, 1.0);
+            __vector float t0 = vec_splats(1.0f);
             __vector float t1 = vec_div(t0, mVec);
-            mVec t3 = vec_sel(mVec, t1, mask.mMask);
+            mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
        }
        // RCPSA
        UME_FORCE_INLINE SIMDVec_f & rcpa(float b) {
            //__vector double t0 = vec_recip(SET_F64(b), mVec);
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             mVec = vec_div(t0, mVec);
             return *this;
        }
        // MRCPSA
        UME_FORCE_INLINE SIMDVec_f & rcpa(SIMDVecMask<4> const & mask, float b) {
             //__vector double t0 = vec_recip(SET_F64(b), mVec);
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector float t1 = vec_div(t0, mVec);
             mVec = vec_sel(mVec, t1, mask.mMask);
            return *this;
@@ -946,8 +907,7 @@ namespace SIMD {
         }
         // CMPEQS
         UME_FORCE_INLINE SIMDVecMask<4> cmpeq(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector __bool int t1 = vec_cmpeq(mVec, t0);
             return SIMDVecMask<4>(t1);
         }
@@ -963,7 +923,7 @@ namespace SIMD {
             }magic;
 
             magic.l = SIMDVecMask<4>::TRUE_VAL();
-            SET_F32(t0, magic.d);
+            t0 = vec_splats(magic.d);
             __vector float t1 = vec_xor(vec_cmpeq(mVec, b.mVec), t0);
             return SIMDVecMask<4>((__vector __bool int)t1);
         }
@@ -972,16 +932,14 @@ namespace SIMD {
         }
         // CMPNES
         UME_FORCE_INLINE SIMDVecMask<4> cmpne(float b) const {
-            __vector float t0, t1;
-
             union {
                     uint32_t l;
                     float d;
             }magic;
 
             magic.l = SIMDVecMask<4>::TRUE_VAL();
-            SET_F32(t0, magic.d);
-            SET_F32(t1, b);
+            __vector float t0 = vec_splats(magic.d);
+            __vector float t1 = vec_splats(b);
             __vector float t2 = vec_xor(vec_cmpeq(mVec, t1), t0);
             return SIMDVecMask<4>((__vector __bool int)t2);
         }
@@ -998,8 +956,7 @@ namespace SIMD {
         }
         // CMPGTS
         UME_FORCE_INLINE SIMDVecMask<4> cmpgt(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector __bool int t1 = vec_cmpgt(mVec, t0);
             return SIMDVecMask<4>(t1);
         }
@@ -1016,8 +973,7 @@ namespace SIMD {
         }
         // CMPLTS
         UME_FORCE_INLINE SIMDVecMask<4> cmplt(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector __bool int t1 = vec_cmplt(mVec, t0);
             return SIMDVecMask<4>(t1);
         }
@@ -1034,8 +990,7 @@ namespace SIMD {
         }
         // CMPGES
         UME_FORCE_INLINE SIMDVecMask<4> cmpge(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector __bool int t1 = vec_cmpge(mVec, t0);
             return SIMDVecMask<4>(t1);
         }
@@ -1052,8 +1007,7 @@ namespace SIMD {
         }
         // CMPLES
         UME_FORCE_INLINE SIMDVecMask<4> cmple(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             __vector __bool int t1 = vec_cmple(mVec, t0);
             return SIMDVecMask<4>(t1);
         }
@@ -1066,8 +1020,7 @@ namespace SIMD {
         }
         // CMPES
         UME_FORCE_INLINE bool cmpe(float b) const {
-            __vector float t0;
-            SET_F32(t0, b);
+            __vector float t0 = vec_splats(b);
             return vec_all_eq(mVec, t0);
         }
 //        // UNIQUE
@@ -1186,19 +1139,19 @@ namespace SIMD {
         // MMAXV
         UME_FORCE_INLINE SIMDVec_f max(SIMDVecMask<4> const & mask, SIMDVec_f const & b) const {
             __vector float t0 = vec_max(mVec, b.mVec);
-            __vector float t1 = vec_sel(mVec, t2, mask.mMask);
+            __vector float t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_f(t1);
         }
         // MAXS
         UME_FORCE_INLINE SIMDVec_f max(float b) const {
             SIMDVec_f t0(b, b, b, b);
-            __vector float t1 = vec_max(mVec, t0);
+            __vector float t1 = vec_max(mVec, t0.mVec);
             return SIMDVec_f(t1);
         }
         // MMAXS
         UME_FORCE_INLINE SIMDVec_f max(SIMDVecMask<4> const & mask, float b) const {
             SIMDVec_f t0(b, b, b, b);
-            __vector float t1 = vec_max(mVec, t0);
+            __vector float t1 = vec_max(mVec, t0.mVec);
             __vector float t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_f(t2);
         }
@@ -1210,19 +1163,19 @@ namespace SIMD {
         // MMAXVA
         UME_FORCE_INLINE SIMDVec_f & maxa(SIMDVecMask<4> const & mask, SIMDVec_f const & b) {
             __vector float t0 = vec_max(mVec, b.mVec);
-            mVec = vec_sel(mVec, t2, mask.mMask);
+            mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
         // MAXSA
         UME_FORCE_INLINE SIMDVec_f & maxa(float b) {
             SIMDVec_f t0(b, b, b, b);
-            mVec = vec_max(mVec, t0);
+            mVec = vec_max(mVec, t0.mVec);
             return *this;
         }
         // MMAXSA
         UME_FORCE_INLINE SIMDVec_f & maxa(SIMDVecMask<4> const & mask, float b) {
             SIMDVec_f t0(b, b, b, b);
-            __vector float t1 = vec_max(mVec, t0);
+            __vector float t1 = vec_max(mVec, t0.mVec);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
         }
@@ -1234,19 +1187,19 @@ namespace SIMD {
         // MMINV
         UME_FORCE_INLINE SIMDVec_f min(SIMDVecMask<4> const & mask, SIMDVec_f const & b) const {
             __vector float t0 = vec_min(mVec, b.mVec);
-            __vector float t1 = vec_sel(mVec, t2, mask.mMask);
+            __vector float t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_f(t1);
         }
         // MINS
         UME_FORCE_INLINE SIMDVec_f min(float b) const {
             SIMDVec_f t0(b, b, b, b);
-            __vector float t1 = vec_min(mVec, t0);
+            __vector float t1 = vec_min(mVec, t0.mVec);
             return SIMDVec_f(t1);
         }
         // MMINS
         UME_FORCE_INLINE SIMDVec_f min(SIMDVecMask<4> const & mask, float b) const {
             SIMDVec_f t0(b, b, b, b);
-            __vector float t1 = vec_min(mVec, t0);
+            __vector float t1 = vec_min(mVec, t0.mVec);
             __vector float t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_f(t2);
         }
@@ -1258,19 +1211,19 @@ namespace SIMD {
         // MMINVA
         UME_FORCE_INLINE SIMDVec_f & mina(SIMDVecMask<4> const & mask, SIMDVec_f const & b) {
             __vector float t0 = vec_min(mVec, b.mVec);
-            mVec = vec_sel(mVec, t2, mask.mMask);
+            mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
         // MINSA
         UME_FORCE_INLINE SIMDVec_f & mina(float b) {
             SIMDVec_f t0(b, b, b, b);
-            mVec = vec_min(mVec, t0);
+            mVec = vec_min(mVec, t0.mVec);
             return *this;
         }
         // MMINSA
         UME_FORCE_INLINE SIMDVec_f & mina(SIMDVecMask<4> const & mask, float b) {
             SIMDVec_f t0(b, b, b, b);
-            __vector float t1 = vec_min(mVec, t0);
+            __vector float t1 = vec_min(mVec, t0.mVec);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
         }
@@ -1423,8 +1376,7 @@ namespace SIMD {
 //         }
         // NEG
         UME_FORCE_INLINE SIMDVec_f neg() const {
-            __vector float t0;
-            SET_F32(t0, 0.0f);
+            __vector float t0 = vec_splats(0.0f);
             __vector float t1 = vec_sub(t0, mVec);
             return SIMDVec_f(t1);
         }
@@ -1433,8 +1385,7 @@ namespace SIMD {
         }
         // MNEG
         UME_FORCE_INLINE SIMDVec_f neg(SIMDVecMask<4> const & mask) const {
-            __vector float t0;
-            SET_F32(t0, 0.0f);
+            __vector float t0 = vec_splats(0.0f);
             __vector float t1 = vec_sub(t0, mVec);
             __vector float t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_f(t2);
@@ -1442,15 +1393,13 @@ namespace SIMD {
 
        // NEGA
        UME_FORCE_INLINE SIMDVec_f & nega() {
-            __vector float t0;
-            SET_F32(t0, 0.0f);
+            __vector float t0 = vec_splats(0.0f);
             mVec = vec_sub(t0, mVec);
             return *this;
        }
        // MNEGA
        UME_FORCE_INLINE SIMDVec_f & nega(SIMDVecMask<4> const & mask) {
-            __vector float t0;
-            SET_F32(t0, 0.0f);
+            __vector float t0 = vec_splats(0.0f);
             __vector float t1 = vec_sub(t0, mVec);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -1507,7 +1456,7 @@ namespace SIMD {
         // MSQR
         UME_FORCE_INLINE SIMDVec_f sqr(SIMDVecMask<4> const & mask) const {
             __vector float t0 = vec_mul(mVec, mVec);
-            __vector float t1 = vec_sel(mVec, t1, mask.mMask);
+            __vector float t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_f(t1);
         }
         // SQRA
@@ -1516,7 +1465,7 @@ namespace SIMD {
             return *this;
         }
         // MSQRA
-        UME_FORCE_INLINE SIMDVec_f & sqra(SIMDVecMask<8> const & mask) {
+        UME_FORCE_INLINE SIMDVec_f & sqra(SIMDVecMask<4> const & mask) {
             __vector float t0 = vec_mul(mVec, mVec);
             mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
@@ -1561,7 +1510,7 @@ namespace SIMD {
         // TRUNC
        UME_FORCE_INLINE SIMDVec_i<int32_t, 4> trunc() const {
            __vector float t0 = vec_trunc(mVec);
-           __vector int32_t t1 = vec_cts(t0);
+           __vector int32_t t1 = vec_cts(t0, 0);
            return SIMDVec_i<int32_t, 4>(t1);
        }
        // MTRUNC
@@ -1569,7 +1518,7 @@ namespace SIMD {
            SIMDVec_f allZero(0, 0, 0, 0);
            __vector float t0 = vec_trunc(mVec);
            __vector float t1 = vec_sel(allZero.mVec, t0, mask.mMask);
-           __vector int32_t t2 = vec_cts(t1);
+           __vector int32_t t2 = vec_cts(t1, 0);
            return SIMDVec_i<int32_t, 4>(t2);
        }
         // FLOOR
@@ -1660,7 +1609,6 @@ namespace SIMD {
 }
 
 #undef BLEND
-#undef SET_F32
 #undef MASK_TO_VEC
 
 #endif

@@ -66,9 +66,6 @@ namespace SIMD {
         inline SIMDVecMask(__vector __bool long long const & x) {
             this->mMask = (__vector uint64_t) x;
         }
-        inline SIMDVecMask(__vector uint64_t const & x) {
-            this->mMask = (__vector uint64_t) x;
-        }
 
     public:
         UME_FORCE_INLINE SIMDVecMask() {}
@@ -76,7 +73,7 @@ namespace SIMD {
         // Regardless of the mask representation, the interface should only allow initialization using 
         // standard bool or using equivalent mask
         UME_FORCE_INLINE SIMDVecMask(bool m) {
-            mMask = (m == true) ? vec_splat_u32(TRUE_VAL_LONG()) : vec_splat_u32(FALSE_VAL_LONG());
+            mMask = (m == true) ? vec_splats(TRUE_VAL_LONG()) : vec_splats(FALSE_VAL_LONG());
         }
 
         // LOAD-CONSTR - Construct by loading from memory
@@ -84,21 +81,21 @@ namespace SIMD {
             alignas(16) uint64_t raw[2];
             raw[0] = (p[0] == true) ? TRUE_VAL_LONG() : FALSE_VAL_LONG();
             raw[1] = (p[1] == true) ? TRUE_VAL_LONG() : FALSE_VAL_LONG();
-            mMask = vec_ld(0, raw);
+            mMask = (__vector uint64_t) vec_vsx_ld(0, (uint32_t*)raw);
         }
 
         UME_FORCE_INLINE SIMDVecMask(bool m0, bool m1) {
             alignas(16) uint64_t raw[2];
             raw[0] = (m0 == true) ? TRUE_VAL_LONG() : FALSE_VAL_LONG();
             raw[1] = (m1 == true) ? TRUE_VAL_LONG() : FALSE_VAL_LONG();
-            mMask = vec_ld(0, raw);
+            mMask = (__vector uint64_t) vec_vsx_ld(0, (uint32_t*)raw);
         }
 
         UME_FORCE_INLINE SIMDVecMask(uint32_t m0, uint32_t m1) {
             alignas(16) uint64_t raw[2];
             raw[0] = (m0 != FALSE_VAL()) ? TRUE_VAL_LONG() : FALSE_VAL_LONG();
             raw[1] = (m1 != FALSE_VAL()) ? TRUE_VAL_LONG() : FALSE_VAL_LONG();
-            mMask = vec_ld(0, raw);
+            mMask = (__vector uint64_t) vec_vsx_ld(0, (uint32_t*)raw);
         }
 
         UME_FORCE_INLINE SIMDVecMask(SIMDVecMask const & mask) {
@@ -106,7 +103,7 @@ namespace SIMD {
         }
 
         UME_FORCE_INLINE bool extract(uint32_t index) const {
-            return ((uint64_t*)&mMask)[index] != FALSE_VAL();
+            return ((uint64_t*)&mMask)[index] == TRUE_VAL_LONG();
         }
 
         // A non-modifying element-wise access operator
@@ -116,7 +113,7 @@ namespace SIMD {
 
         // Element-wise modification operator
         UME_FORCE_INLINE void insert(uint32_t index, bool x) {
-            mMask[index & 1] = x ? TRUE_VAL() : FALSE_VAL();
+            mMask[index & 1] = x ? TRUE_VAL_LONG() : FALSE_VAL_LONG();
         }
 
         UME_FORCE_INLINE SIMDVecMask & operator= (SIMDVecMask const & mask) {
@@ -159,7 +156,7 @@ namespace SIMD {
         // LANDSA
         UME_FORCE_INLINE SIMDVecMask & landa(bool value) {
             SIMDVecMask t0(value);
-            mVec = vec_and(mMask, t0.mMask);
+            mMask = vec_and(mMask, t0.mMask);
             return *this;
         }
         UME_FORCE_INLINE SIMDVecMask & operator&= (bool value) {
@@ -167,7 +164,7 @@ namespace SIMD {
         }
         // LORV
         UME_FORCE_INLINE SIMDVecMask lor(SIMDVecMask const & maskOp) const {
-            __vector uint64_t t0 = vec_or(mVec, maskOp.mMask);
+            __vector uint64_t t0 = vec_or(mMask, maskOp.mMask);
             return SIMDVecMask(t0);
         }
         UME_FORCE_INLINE SIMDVecMask operator| (SIMDVecMask const & maskOp) const {
@@ -190,7 +187,7 @@ namespace SIMD {
         }
         // LORVA
         UME_FORCE_INLINE SIMDVecMask & lora(SIMDVecMask const & maskOp) {
-            mVec = vec_or(mVec, maskOp.mMask);
+            mMask = vec_or(mMask, maskOp.mMask);
             return *this;
         }
         UME_FORCE_INLINE SIMDVecMask & operator|= (SIMDVecMask const & maskOp) {
@@ -199,7 +196,7 @@ namespace SIMD {
         // LORSA
         UME_FORCE_INLINE SIMDVecMask & lora(bool value) {
             SIMDVecMask t0(value);
-            mVec = vec_or(mMask, t0.mMask);
+            mMask = vec_or(mMask, t0.mMask);
             return *this;
         }
         UME_FORCE_INLINE SIMDVecMask & operator|= (bool value) {
@@ -207,7 +204,7 @@ namespace SIMD {
         }
         // LNOT
         UME_FORCE_INLINE SIMDVecMask lnot () const {
-            __vector uint64_t t0 = vec_nor(mVec, mVec);
+            __vector uint64_t t0 = vec_nor(mMask, mMask);
             return SIMDVecMask(t0);
         }
         

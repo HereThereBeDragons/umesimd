@@ -32,7 +32,8 @@
 #define UME_SIMD_VEC_UINT32_4_H_
 
 #include <type_traits>
-
+#include <iostream>
+ 
 #include "../../../UMESimdInterface.h"
 
 #define SET_U32(x, a) alignas(16) uint32_t setu32_array[4] = {a, a, a, a}; \
@@ -72,7 +73,7 @@ namespace SIMD {
         UME_FORCE_INLINE SIMDVec_u() {}
         // SET-CONSTR
         UME_FORCE_INLINE SIMDVec_u(uint32_t i) {
-            SET_U32(mVec, i);
+            mVec = vec_splats(i);
         }
         // This constructor is used to force types other than SCALAR_TYPES
         // to be promoted to SCALAR_TYPE instead of SCALAR_TYPE*. This prevents
@@ -144,7 +145,7 @@ namespace SIMD {
         }
         // ASSIGNS
         UME_FORCE_INLINE SIMDVec_u & assign(uint32_t b) {
-            SET_U32(mVec, b);
+            mVec = vec_splats(b);
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_u & operator= (uint32_t b) {
@@ -152,8 +153,7 @@ namespace SIMD {
         }
         // MASSIGNS
         UME_FORCE_INLINE SIMDVec_u & assign(SIMDVecMask<4> const & mask, uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
@@ -183,7 +183,7 @@ namespace SIMD {
             
             // The data needs to be re-aligned so that we don't loose bits.
             alignas(16) uint32_t raw[4] = {p[0], p[1], p[2], p[3]};
-            __vector uint32_t t0 = vec_ld(0, raw);
+            __vector uint32_t t0 = vec_vsx_ld(0, raw);
             mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
@@ -194,7 +194,8 @@ namespace SIMD {
         }
         // MLOADA
         UME_FORCE_INLINE SIMDVec_u & loada(SIMDVecMask<4> const & mask, uint32_t const *p) {
-            __vector uint32_t t0 = vec_ld(0, p);
+            alignas(16) uint32_t raw[4] = {p[0], p[1], p[2], p[3]};
+            __vector uint32_t t0 = vec_ld(0, raw);
             mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
@@ -216,20 +217,10 @@ namespace SIMD {
         }
         // MSTORE
         UME_FORCE_INLINE uint32_t* store(SIMDVecMask<4> const & mask, uint32_t* p) const {
-            // From PIM:
-            // "In the AltiVec architecture, an unaligned load/store does not cause an 
-            // alignment exception that might lead to (slow) loading of the bytes at the 
-            // given address. Instead, the low-order bits of the address are quietly ignored."
-            
-            // The data needs to be re-aligned so that we don't loose bits.
-            alignas(16) uint32_t raw[4];
-            alignas(16) uint32_t raw_mask[4];
-            vec_st(mVec, 0, raw);
-            vec_st(mask.mMask, 0, raw_mask);
-            if(raw_mask[0] != 0) p[0] = raw[0];
-            if(raw_mask[1] != 0) p[1] = raw[1];
-            if(raw_mask[2] != 0) p[2] = raw[2];
-            if(raw_mask[3] != 0) p[3] = raw[3];
+            if(mask[0]) p[0] = mVec[0];
+            if(mask[1]) p[1] = mVec[1];
+            if(mask[2]) p[2] = mVec[2];
+            if(mask[3]) p[3] = mVec[3];
             return p;
         }
         // STOREA
@@ -252,9 +243,8 @@ namespace SIMD {
         }
         // BLENDS
         UME_FORCE_INLINE SIMDVec_u blend(SIMDVecMask<4> const & mask, uint32_t b) const {
-            __vector uint32_t t0, t1;
-            SET_U32(t0, b);
-            t1 = vec_sel(mVec, t0, mask.mMask);
+            __vector uint32_t t0 = vec_splats(b);
+            __vector uint32_t t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_u(t1);
         }
         // SWIZZLE
@@ -276,8 +266,7 @@ namespace SIMD {
         }
         // ADDS
         UME_FORCE_INLINE SIMDVec_u add(uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_add(mVec, t0);
             return SIMDVec_u(t1);
         }
@@ -286,8 +275,7 @@ namespace SIMD {
         }
         // MADDS
         UME_FORCE_INLINE SIMDVec_u add(SIMDVecMask<4> const & mask, uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_add(mVec, t0);
             __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
@@ -308,8 +296,7 @@ namespace SIMD {
         }
         // ADDSA
         UME_FORCE_INLINE SIMDVec_u & adda(uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             mVec = vec_add(mVec, t0);
             return *this;
         }
@@ -318,8 +305,7 @@ namespace SIMD {
         }
         // MADDSA
         UME_FORCE_INLINE SIMDVec_u & adda(SIMDVecMask<4> const & mask, uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_add(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -432,8 +418,7 @@ namespace SIMD {
         } */
         // POSTINC
         UME_FORCE_INLINE SIMDVec_u postinc() {
-            __vector uint32_t t0;
-            SET_U32(t0, 1);
+            __vector uint32_t t0 = vec_splat_u32(1);
             __vector uint32_t t1 = mVec;
             mVec = vec_add(mVec, t0);
             return SIMDVec_u(t1);
@@ -443,8 +428,7 @@ namespace SIMD {
         }
         // MPOSTINC
         UME_FORCE_INLINE SIMDVec_u postinc(SIMDVecMask<4> const & mask) {
-            __vector uint32_t t0;
-            SET_U32(t0, 1);
+            __vector uint32_t t0 = vec_splat_u32(1);
             __vector uint32_t t1 = mVec;
             __vector uint32_t t2 = vec_add(mVec, t0);
             mVec = vec_sel(mVec, t2, mask.mMask);
@@ -452,8 +436,7 @@ namespace SIMD {
          }
         // PREFINC
         UME_FORCE_INLINE SIMDVec_u & prefinc() {
-            __vector uint32_t t0;
-            SET_U32(t0, 1);
+            __vector uint32_t t0 = vec_splat_u32(1);
             mVec = vec_add(mVec, t0);
             return *this;
         }
@@ -462,8 +445,7 @@ namespace SIMD {
         }
         // MPREFINC
         UME_FORCE_INLINE SIMDVec_u & prefinc(SIMDVecMask<4> const & mask) {
-            __vector uint32_t t0;
-            SET_U32(t0, 1);
+            __vector uint32_t t0 = vec_splat_u32(1);
             __vector uint32_t t1 = vec_add(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -484,8 +466,7 @@ namespace SIMD {
         }
         // SUBS
         UME_FORCE_INLINE SIMDVec_u sub(uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_sub(mVec, t0);
             return SIMDVec_u(t1);
         }
@@ -494,8 +475,7 @@ namespace SIMD {
         }
         // MSUBS
         UME_FORCE_INLINE SIMDVec_u sub(SIMDVecMask<4> const & mask, uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_sub(mVec, t0);
             __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
@@ -516,8 +496,7 @@ namespace SIMD {
         }
         // SUBSA
         UME_FORCE_INLINE SIMDVec_u & suba(uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             mVec = vec_sub(mVec, t0);
             return *this;
         }
@@ -526,8 +505,7 @@ namespace SIMD {
         }
         // MSUBSA
         UME_FORCE_INLINE SIMDVec_u & suba(SIMDVecMask<4> const & mask, uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_sub(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -545,15 +523,13 @@ namespace SIMD {
         }
         // SSUBS
         UME_FORCE_INLINE SIMDVec_u ssub(uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_subs(mVec, t0);
             return SIMDVec_u(t1);
         }
         // MSSUBS
         UME_FORCE_INLINE SIMDVec_u ssub(SIMDVecMask<4> const & mask, uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_subs(mVec, t0);
             __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
@@ -571,15 +547,13 @@ namespace SIMD {
         }
         // SSUBSA
         UME_FORCE_INLINE SIMDVec_u & ssuba(uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             mVec = vec_subs(mVec, t0);
             return *this;
         }
         // MSSUBSA
         UME_FORCE_INLINE SIMDVec_u & ssuba(SIMDVecMask<4> const & mask, uint32_t b)  {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_subs(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -597,15 +571,13 @@ namespace SIMD {
         }
         // SUBFROMS
         UME_FORCE_INLINE SIMDVec_u subfrom(uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b)
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_sub(t0, mVec);
             return SIMDVec_u(t1);
         }
         // MSUBFROMS
         UME_FORCE_INLINE SIMDVec_u subfrom(SIMDVecMask<4> const & mask, uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b)
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_sub(t0, mVec);
             __vector uint32_t t2 = vec_sel(t0, t1, mask.mMask);
             return SIMDVec_u(t2);
@@ -623,34 +595,30 @@ namespace SIMD {
         }
         // SUBFROMSA
         UME_FORCE_INLINE SIMDVec_u & subfroma(uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             mVec = vec_sub(t0, mVec);
             return *this;
         }
         // MSUBFROMSA
         UME_FORCE_INLINE SIMDVec_u & subfroma(SIMDVecMask<4> const & mask, uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_sub(t0, mVec);
             mVec = vec_sel(t0, t1, mask.mMask);
             return *this;
         }
         // POSTDEC
         UME_FORCE_INLINE SIMDVec_u postdec() {
-            __vector uint32_t t0;
-            SET_U32(t0, 1);
+            __vector uint32_t t0 = vec_splat_u32(1);
             __vector uint32_t t1 = mVec;
             mVec = vec_sub(mVec, t0);
-            return SIMDVec_i(t1);
+            return SIMDVec_u(t1);
         }
         UME_FORCE_INLINE SIMDVec_u operator-- (int) {
             return postdec();
         }
         // MPOSTDEC
         UME_FORCE_INLINE SIMDVec_u postdec(SIMDVecMask<4> const & mask) {
-            __vector uint32_t t0;
-            SET_U32(t0, 1);
+            __vector uint32_t t0 = vec_splat_u32(1);
             __vector uint32_t t1 = mVec;
             __vector uint32_t t2 = vec_sub(mVec, t0);
             mVec = vec_sel(mVec, t2, mask.mMask);
@@ -658,8 +626,7 @@ namespace SIMD {
         }
         // PREFDEC
         UME_FORCE_INLINE SIMDVec_u & prefdec() {
-            __vector uint32_t t0;
-            SET_U32(t0, 1);
+            __vector uint32_t t0 = vec_splat_u32(1);
             mVec = vec_sub(mVec, t0);
             return *this;
         }
@@ -668,8 +635,7 @@ namespace SIMD {
         }
         // MPREFDEC
         UME_FORCE_INLINE SIMDVec_u & prefdec(SIMDVecMask<4> const & mask) {
-            __vector uint32_t t0;
-            SET_U32(t0, 1);
+            __vector uint32_t t0 = vec_splat_u32(1);
             __vector uint32_t t1 = vec_sub(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -689,10 +655,9 @@ namespace SIMD {
             __vector uint32_t t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_u(t1);
         }
-        MULS
+        // MULS
         UME_FORCE_INLINE SIMDVec_u mul(uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b)
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_mul(mVec, t0);
             return SIMDVec_u(t1);
         }
@@ -701,8 +666,7 @@ namespace SIMD {
         }
         // MMULS
         UME_FORCE_INLINE SIMDVec_u mul(SIMDVecMask<4> const & mask, uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b)
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_mul(mVec, t0);
             __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
@@ -724,8 +688,7 @@ namespace SIMD {
         }
         // MULSA
         UME_FORCE_INLINE SIMDVec_u & mula(uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             mVec = vec_mul(mVec, t0);
             return *this;
         }
@@ -734,12 +697,12 @@ namespace SIMD {
         }
         // MMULSA
         UME_FORCE_INLINE SIMDVec_u & mula(SIMDVecMask<4> const & mask, uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_mul(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;;
         }
+/* gcc7.3 no div for uint32 -- is this true???
         // DIVV
         UME_FORCE_INLINE SIMDVec_u div(SIMDVec_u const & b) const {
             __vector uint32_t t0 = vec_div(mVec, b.mVec);
@@ -756,8 +719,7 @@ namespace SIMD {
         }
         // DIVS
         UME_FORCE_INLINE SIMDVec_u div(uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_div(mVec, t0);
             return SIMDVec_u(t1);
         }
@@ -766,8 +728,7 @@ namespace SIMD {
         }
         // MDIVS
         UME_FORCE_INLINE SIMDVec_u div(SIMDVecMask<4> const & mask, uint32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_div(mVec, t0);
             __vector uint32_t t3 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t3);
@@ -788,8 +749,7 @@ namespace SIMD {
         }
         // DIVSA
         UME_FORCE_INLINE SIMDVec_u & diva(uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             mVec = vec_div(mVec, t0);
             return *this;
         }
@@ -798,8 +758,7 @@ namespace SIMD {
         }
         // MDIVSA
         UME_FORCE_INLINE SIMDVec_u & diva(SIMDVecMask<4> const & mask, uint32_t b) {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_div(mVec, t0);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
@@ -807,33 +766,29 @@ namespace SIMD {
         // RCP
         UME_FORCE_INLINE SIMDVec_u rcp() const {
             //__vector double t0 = vec_recip(SET_F64(1.0), mVec);
-            __vector uint32_t t0;
-            SET_U32(t0, 1.0);
+            __vector uint32_t t0 = vec_splat_u32(1);
             __vector uint32_t t1 = vec_div(t0, mVec);
             return SIMDVec_u(t1);
         }
         // MRCP
         UME_FORCE_INLINE SIMDVec_u rcp(SIMDVecMask<4> const & mask) const {
             //__vector double t0 = vec_recip(SET_F64(1.0), mVec);
-            __vector uint32_t t0;
-            SET_U32(t0, 1.0);
+            __vector uint32_t t0 = vec_splat_u32(1);
             __vector uint32_t t1 = vec_div(t0, mVec);
             __vector uint32_t t3 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t3);
         }
         // RCPS
-        UME_FORCE_INLINE SIMDVec_u rcp(int32_t b) const {
+        UME_FORCE_INLINE SIMDVec_u rcp(uint32_t b) const {
             //__vector double t0 = vec_recip(SET_F64(b), mVec);
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_div(t0, mVec);
             return SIMDVec_u(t1);
         }
         // MRCPS
         UME_FORCE_INLINE SIMDVec_u rcp(SIMDVecMask<4> const & mask, uint32_t b) const {
             //__vector double t0 = vec_recip(SET_F64(b), mVec);
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_div(t0, mVec);
             __vector uint32_t t3 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t3);
@@ -841,37 +796,35 @@ namespace SIMD {
         // RCPA
         UME_FORCE_INLINE SIMDVec_u & rcpa() {
            //__vector double t0 = vec_recip(SET_F64(1.0), mVec);
-            __vector uint32_t t0;
-            SET_U32(t0, 1.0);
+            __vector uint32_t t0 = vec_splat_u32(1);
             mVec = vec_div(t0, mVec);
             return *this;
         }
         // MRCPA
         UME_FORCE_INLINE SIMDVec_u & rcpa(SIMDVecMask<4> const & mask) {
            //__vector double t0 = vec_recip(SET_F64(1.0), mVec);
-            __vector uint32_t t0;
-            SET_U32(t0, 1.0);
+            __vector uint32_t t0 = vec_splat_u32(1);
             __vector uint32_t t1 = vec_div(t0, mVec);
-            mVec t3 = vec_sel(mVec, t1, mask.mMask);
+            mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
         }
         // RCPSA
-        UME_FORCE_INLINE SIMDVec_u & rcpa(int32_t b) {
+        UME_FORCE_INLINE SIMDVec_u & rcpa(uint32_t b) {
            //__vector double t0 = vec_recip(SET_F64(b), mVec);
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             mVec = vec_div(t0, mVec);
             return *this;
         }
         // MRCPSA
         UME_FORCE_INLINE SIMDVec_u & rcpa(SIMDVecMask<4> const & mask, uint32_t b) {
             //__vector double t0 = vec_recip(SET_F64(b), mVec);
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+            __vector uint32_t t0 = vec_splats(b);
             __vector uint32_t t1 = vec_div(t0, mVec);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
         }
+gcc7.3 no div for uint32??
+*/
         // CMPEQV
         UME_FORCE_INLINE SIMDVecMask<4> cmpeq(SIMDVec_u const & b) const {
             // __vector __bool uint32_t and __vector uint32_t does not work
@@ -882,19 +835,17 @@ namespace SIMD {
             return cmpeq(b);
         }
         // CMPEQS
-        UME_FORCE_INLINE SIMDVecMask<4> cmpeq(int32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+        UME_FORCE_INLINE SIMDVecMask<4> cmpeq(uint32_t b) const {
+            __vector uint32_t t0 = vec_splats(b);
             __vector __bool int t1 = vec_cmpeq(mVec, t0);
             return SIMDVecMask<4>(t1);
         }
-        UME_FORCE_INLINE SIMDVecMask<4> operator== (int32_t b) const {
+        UME_FORCE_INLINE SIMDVecMask<4> operator== (uint32_t b) const {
             return cmpeq(b);
         }
         // CMPNEV
         UME_FORCE_INLINE SIMDVecMask<4> cmpne(SIMDVec_u const & b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, SIMDVecMask<4>::TRUE_VAL());
+            __vector uint32_t t0 = vec_splats(SIMDVecMask<4>::TRUE_VAL());
             __vector uint32_t t1 = vec_xor(vec_cmpeq(mVec, b.mVec), t0);
             return SIMDVecMask<4>(t1);
         }
@@ -902,14 +853,13 @@ namespace SIMD {
             return cmpne(b);
         }
         // CMPNES
-        UME_FORCE_INLINE SIMDVecMask<4> cmpne(int32_t b) const {
-            __vector uint32_t t0, t1;
-            SET_U32(t0, SIMDVecMask<4>::TRUE_VAL());
-            SET_U32(t1, b);
+        UME_FORCE_INLINE SIMDVecMask<4> cmpne(uint32_t b) const {
+            __vector uint32_t t0 = vec_splats(SIMDVecMask<4>::TRUE_VAL());
+            __vector uint32_t t1 = vec_splats(b);
             __vector uint32_t t2 = vec_xor(vec_cmpeq(mVec, t1), t0);
             return SIMDVecMask<4>(t2);
         }
-        UME_FORCE_INLINE SIMDVecMask<4> operator!= (int32_t b) const {
+        UME_FORCE_INLINE SIMDVecMask<4> operator!= (uint32_t b) const {
             return cmpne(b);
         }
         // CMPGTV
@@ -921,13 +871,12 @@ namespace SIMD {
             return cmpgt(b);
         }
         // CMPGTS
-        UME_FORCE_INLINE SIMDVecMask<4> cmpgt(int32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+        UME_FORCE_INLINE SIMDVecMask<4> cmpgt(uint32_t b) const {
+            __vector uint32_t t0 = vec_splats(b);
             __vector __bool int t1 = vec_cmpgt(mVec, t0);
             return SIMDVecMask<4>(t1);
         }
-        UME_FORCE_INLINE SIMDVecMask<4> operator> (int32_t b) const {
+        UME_FORCE_INLINE SIMDVecMask<4> operator> (uint32_t b) const {
             return cmpgt(b);
         }
         // CMPLTV
@@ -939,13 +888,12 @@ namespace SIMD {
              return cmplt(b);
          }
         // CMPLTS
-         UME_FORCE_INLINE SIMDVecMask<4> cmplt(int32_t b) const {
-             __vector uint32_t t0;
-             SET_U32(t0, b);
+         UME_FORCE_INLINE SIMDVecMask<4> cmplt(uint32_t b) const {
+             __vector uint32_t t0 = vec_splats(b);
              __vector __bool int t1 = vec_cmplt(mVec, t0);
              return SIMDVecMask<4>(t1);
          }
-         UME_FORCE_INLINE SIMDVecMask<4> operator< (int32_t b) const {
+         UME_FORCE_INLINE SIMDVecMask<4> operator< (uint32_t b) const {
              return cmplt(b);
          }
         // CMPGEV
@@ -957,13 +905,12 @@ namespace SIMD {
             return cmpge(b);
         }
         // CMPGES
-        UME_FORCE_INLINE SIMDVecMask<4> cmpge(int32_t b) const {
-            __vector uint32_t t0;
-                SET_U32(t0, b);
+        UME_FORCE_INLINE SIMDVecMask<4> cmpge(uint32_t b) const {
+            __vector uint32_t t0 = vec_splats(b);
             __vector __bool int t1 = vec_or(vec_cmpgt(mVec, t0), vec_cmpeq(mVec, t0));
             return SIMDVecMask<4>(t1);
         }
-        UME_FORCE_INLINE SIMDVecMask<4> operator>= (int32_t b) const {
+        UME_FORCE_INLINE SIMDVecMask<4> operator>= (uint32_t b) const {
             return cmpge(b);
         }
         // CMPLEV
@@ -975,13 +922,12 @@ namespace SIMD {
             return cmple(b);
         }
         // CMPLES
-        UME_FORCE_INLINE SIMDVecMask<4> cmple(int32_t b) const {
-            __vector uint32_t t0;
-                SET_U32(t0, b);
-                __vector __bool int t1 = vec_or(vec_cmplt(mVec, t0), vec_cmpeq(mVec, t0));
+        UME_FORCE_INLINE SIMDVecMask<4> cmple(uint32_t b) const {
+            __vector uint32_t t0 = vec_splats(b);
+            __vector __bool int t1 = vec_or(vec_cmplt(mVec, t0), vec_cmpeq(mVec, t0));
             return SIMDVecMask<4>(t1);
         }
-        UME_FORCE_INLINE SIMDVecMask<4> operator<= (int32_t b) const {
+        UME_FORCE_INLINE SIMDVecMask<4> operator<= (uint32_t b) const {
             return cmple(b);
         }
         // CMPEV
@@ -989,9 +935,8 @@ namespace SIMD {
             return vec_all_eq(mVec, b.mVec);
         }
         // CMPES
-        UME_FORCE_INLINE bool cmpe(int32_t b) const {
-            __vector uint32_t t0;
-            SET_U32(t0, b);
+        UME_FORCE_INLINE bool cmpe(uint32_t b) const {
+            __vector uint32_t t0 = vec_splats(b);
             return vec_all_eq(mVec, t0);
         }
         // UNIQUE
@@ -1053,6 +998,7 @@ namespace SIMD {
             return t3;
         }
 */
+/* gcc73 no vec_madd
         // FMULADDV
         UME_FORCE_INLINE SIMDVec_u fmuladd(SIMDVec_u const & b, SIMDVec_u const & c) const {
             __vector uint32_t t0 = vec_madd(mVec, b.mVec, c.mVec);
@@ -1075,8 +1021,10 @@ namespace SIMD {
             __vector uint32_t t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_u(t1);
         }
+gcc73 no vec_madd
+*/
         // FADDMULV
-        UME_FORCE_INLINE SIMDVec_u faddmul(SIMDVec_u const & b, SIMDVec_u const & c) const {
+         SIMDVec_u faddmul(SIMDVec_u const & b, SIMDVec_u const & c) const {
             __vector uint32_t t0 = vec_add(mVec, b.mVec);
             __vector uint32_t t1 = vec_mul(t0, c.mVec);
             return SIMDVec_u(t1);
@@ -1101,7 +1049,6 @@ namespace SIMD {
             __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
         }
-
         // MAXV
         UME_FORCE_INLINE SIMDVec_u max(SIMDVec_u const & b) const {
             __vector uint32_t t0 = vec_max(mVec, b.mVec);
@@ -1110,19 +1057,19 @@ namespace SIMD {
         // MMAXV
         UME_FORCE_INLINE SIMDVec_u max(SIMDVecMask<4> const & mask, SIMDVec_u const & b) const {
             __vector uint32_t t0 = vec_max(mVec, b.mVec);
-            __vector uint32_t t1 = vec_sel(mVec, t2, mask.mMask);
+            __vector uint32_t t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_u(t1);
         }
         // MAXS
         UME_FORCE_INLINE SIMDVec_u max(uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_max(mVec, t0);
+            __vector uint32_t t1 = vec_max(mVec, t0.mVec);
             return SIMDVec_u(t1);
         }
         // MMAXS
         UME_FORCE_INLINE SIMDVec_u max(SIMDVecMask<4> const & mask, uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_max(mVec, t0);
+            __vector uint32_t t1 = vec_max(mVec, t0.mVec);
             __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
         }
@@ -1134,19 +1081,19 @@ namespace SIMD {
         // MMAXVA
         UME_FORCE_INLINE SIMDVec_u & maxa(SIMDVecMask<4> const & mask, SIMDVec_u const & b) {
             __vector uint32_t t0 = vec_max(mVec, b.mVec);
-            mVec = vec_sel(mVec, t2, mask.mMask);
+            mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
         // MAXSA
         UME_FORCE_INLINE SIMDVec_u & maxa(uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            mVec = vec_max(mVec, t0);
+            mVec = vec_max(mVec, t0.mVec);
             return *this;
         }
         // MMAXSA
         UME_FORCE_INLINE SIMDVec_u & maxa(SIMDVecMask<4> const & mask, uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_max(mVec, t0);
+            __vector uint32_t t1 = vec_max(mVec, t0.mVec);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
         }
@@ -1158,19 +1105,19 @@ namespace SIMD {
         // MMINV
         UME_FORCE_INLINE SIMDVec_u min(SIMDVecMask<4> const & mask, SIMDVec_u const & b) const {
             __vector uint32_t t0 = vec_min(mVec, b.mVec);
-            __vector uint32_t t1 = vec_sel(mVec, t2, mask.mMask);
+            __vector uint32_t t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_u(t1);
         }
         // MINS
         UME_FORCE_INLINE SIMDVec_u min(uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_min(mVec, t0);
+            __vector uint32_t t1 = vec_min(mVec, t0.mVec);
             return SIMDVec_u(t1);
         }
         // MMINS
         UME_FORCE_INLINE SIMDVec_u min(SIMDVecMask<4> const & mask, uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_min(mVec, t0);
+            __vector uint32_t t1 = vec_min(mVec, t0.mVec);
             __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
         }
@@ -1182,19 +1129,19 @@ namespace SIMD {
         // MMINVA
         UME_FORCE_INLINE SIMDVec_u & mina(SIMDVecMask<4> const & mask, SIMDVec_u const & b) {
             __vector uint32_t t0 = vec_min(mVec, b.mVec);
-            mVec = vec_sel(mVec, t2, mask.mMask);
+            mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
         // MINSA
         UME_FORCE_INLINE SIMDVec_u & mina(uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            mVec = vec_min(mVec, t0);
+            mVec = vec_min(mVec, t0.mVec);
             return *this;
         }
         // MMINSA
         UME_FORCE_INLINE SIMDVec_u & mina(SIMDVecMask<4> const & mask, uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_min(mVec, t0);
+            __vector uint32_t t1 = vec_min(mVec, t0.mVec);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
         }
@@ -1298,7 +1245,7 @@ namespace SIMD {
         // BANDS
         UME_FORCE_INLINE SIMDVec_u band(uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_and(mVec, t0);
+            __vector uint32_t t1 = vec_and(mVec, t0.mVec);
             return SIMDVec_u(t1);
         }
         UME_FORCE_INLINE SIMDVec_u operator& (uint32_t b) const {
@@ -1307,13 +1254,13 @@ namespace SIMD {
         // MBANDS
         UME_FORCE_INLINE SIMDVec_u band(SIMDVecMask<4> const & mask, uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_and(mVec, t0);
-            __vector uint32_t t2 = vec_sel(mVec, t0, mask.mMask);
+            __vector uint32_t t1 = vec_and(mVec, t0.mVec);
+            __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
         }
         // BANDVA
         UME_FORCE_INLINE SIMDVec_u & banda(SIMDVec_u const & b) {
-            mVec = vec_and(mVec, b.mVec)
+            mVec = vec_and(mVec, b.mVec);
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_u & operator&= (SIMDVec_u const & b) {
@@ -1328,7 +1275,7 @@ namespace SIMD {
         // BANDSA
         UME_FORCE_INLINE SIMDVec_u & banda(uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            mVec = vec_and(mVec, t0);
+            mVec = vec_and(mVec, t0.mVec);
             return *this;
         }
         UME_FORCE_INLINE SIMDVec_u & operator&= (bool b) {
@@ -1337,8 +1284,8 @@ namespace SIMD {
         // MBANDSA
         UME_FORCE_INLINE SIMDVec_u & banda(SIMDVecMask<4> const & mask, uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_and(mVec, t0);
-            mVec = vec_sel(mVec, t0, mask.mMask);
+            __vector uint32_t t1 = vec_and(mVec, t0.mVec);
+            mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
         }
         // BORV
@@ -1356,12 +1303,12 @@ namespace SIMD {
             return SIMDVec_u(t1);
         }
         // BORS
-        UME_FORCE_INLINE SIMDVec_u bor(int32_t b) const {
+        UME_FORCE_INLINE SIMDVec_u bor(uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
             __vector uint32_t t1 = vec_or(mVec, t0.mVec);
             return SIMDVec_u(t1);
         }
-        UME_FORCE_INLINE SIMDVec_u operator| (int32_t b) const {
+        UME_FORCE_INLINE SIMDVec_u operator| (uint32_t b) const {
             return bor(b);
         }
         // MBORS
@@ -1386,12 +1333,12 @@ namespace SIMD {
             return *this;
         }
         // BORSA
-        UME_FORCE_INLINE SIMDVec_u & bora(int32_t b) {
+        UME_FORCE_INLINE SIMDVec_u & bora(uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
             mVec = vec_or(mVec, t0.mVec);
             return *this;
         }
-        UME_FORCE_INLINE SIMDVec_u & operator|= (int32_t b) {
+        UME_FORCE_INLINE SIMDVec_u & operator|= (uint32_t b) {
             return bora(b);
         }
         // MBORSA
@@ -1451,7 +1398,7 @@ namespace SIMD {
             mVec = vec_xor(mVec, t0.mVec);
             return *this;
         }
-        UME_FORCE_INLINE SIMDVec_u & operator^= (int32_t b) {
+        UME_FORCE_INLINE SIMDVec_u & operator^= (uint32_t b) {
             return bxora(b);
         }
         // MBXORSA
@@ -1651,97 +1598,97 @@ namespace SIMD {
         
         // LSHV
         UME_FORCE_INLINE SIMDVec_u lsh(SIMDVec_u const & b) const {
-            __vector uint32_t t0 = vec_sl(mVec, b);
+            __vector uint32_t t0 = vec_sl(mVec, b.mVec);
             return SIMDVec_u(t0);
         }
         // MLSHV
         UME_FORCE_INLINE SIMDVec_u lsh(SIMDVecMask<4> const & mask, SIMDVec_u const & b) const {
-            __vector uint32_t t0 = vec_sl(mVec, b);
+            __vector uint32_t t0 = vec_sl(mVec, b.mVec);
             __vector uint32_t t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_u(t1);
         }
         // LSHS
         UME_FORCE_INLINE SIMDVec_u lsh(uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_sl(mVec, t0);
+            __vector uint32_t t1 = vec_sl(mVec, t0.mVec);
             return SIMDVec_u(t1);
         }
         // MLSHS
         UME_FORCE_INLINE SIMDVec_u lsh(SIMDVecMask<4> const & mask, uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_sl(mVec, t0);
+            __vector uint32_t t1 = vec_sl(mVec, t0.mVec);
             __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
         }
         // LSHVA
         UME_FORCE_INLINE SIMDVec_u & lsha(SIMDVec_u const & b) {
-            mVec = = vec_sl(mVec, b)
+            mVec = vec_sl(mVec, b.mVec);
             return *this;
         }
         // MLSHVA
         UME_FORCE_INLINE SIMDVec_u & lsha(SIMDVecMask<4> const & mask, SIMDVec_u const & b) {
-            __vector uint32_t t0 = vec_sl(mVec, b);
+            __vector uint32_t t0 = vec_sl(mVec, b.mVec);
             mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
         // LSHSA
         UME_FORCE_INLINE SIMDVec_u & lsha(uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            mVec = vec_sl(mVec, t0);
+            mVec = vec_sl(mVec, t0.mVec);
             return *this;
         }
         // MLSHSA
         UME_FORCE_INLINE SIMDVec_u & lsha(SIMDVecMask<4> const & mask, uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_sl(mVec, t0);
+            __vector uint32_t t1 = vec_sl(mVec, t0.mVec);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
         }
         // RSHV
         UME_FORCE_INLINE SIMDVec_u rsh(SIMDVec_u const & b) const {
-            __vector uint32_t t0 = vec_sr(mVec, b);
+            __vector uint32_t t0 = vec_sr(mVec, b.mVec);
             return SIMDVec_u(t0);
         }
         // MRSHV
         UME_FORCE_INLINE SIMDVec_u rsh(SIMDVecMask<4> const & mask, SIMDVec_u const & b) const {
-            __vector uint32_t t0 = vec_sr(mVec, b);
+            __vector uint32_t t0 = vec_sr(mVec, b.mVec);
             __vector uint32_t t1 = vec_sel(mVec, t0, mask.mMask);
             return SIMDVec_u(t1);
         }
         // RSHS
         UME_FORCE_INLINE SIMDVec_u rsh(uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_sr(mVec, t0);
+            __vector uint32_t t1 = vec_sr(mVec, t0.mVec);
             return SIMDVec_u(t1);
         }
         // MRSHS
         UME_FORCE_INLINE SIMDVec_u rsh(SIMDVecMask<4> const & mask, uint32_t b) const {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_sr(mVec, t0);
+            __vector uint32_t t1 = vec_sr(mVec, t0.mVec);
             __vector uint32_t t2 = vec_sel(mVec, t1, mask.mMask);
             return SIMDVec_u(t2);
         }
         // RSHVA
         UME_FORCE_INLINE SIMDVec_u & rsha(SIMDVec_u const & b) {
-            mVec = = vec_sr(mVec, b)
+            mVec = vec_sr(mVec, b.mVec);
             return *this;
         }
         // MRSHVA
         UME_FORCE_INLINE SIMDVec_u & rsha(SIMDVecMask<4> const & mask, SIMDVec_u const & b) {
-            __vector uint32_t t0 = vec_sr(mVec, b);
+            __vector uint32_t t0 = vec_sr(mVec, b.mVec);
             mVec = vec_sel(mVec, t0, mask.mMask);
             return *this;
         }
         // RSHSA
         UME_FORCE_INLINE SIMDVec_u & rsha(uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            mVec = vec_sr(mVec, t0);
+            mVec = vec_sr(mVec, t0.mVec);
             return *this;
         }
         // MRSHSA
         UME_FORCE_INLINE SIMDVec_u & rsha(SIMDVecMask<4> const & mask, uint32_t b) {
             SIMDVec_u t0(b, b, b, b);
-            __vector uint32_t t1 = vec_sr(mVec, t0);
+            __vector uint32_t t1 = vec_sr(mVec, t0.mVec);
             mVec = vec_sel(mVec, t1, mask.mMask);
             return *this;
         }
