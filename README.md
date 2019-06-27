@@ -1,3 +1,14 @@
+Changes by me: 
+- (full) support for ARM aarch64, extended neon instructions 
+- (full) support for IBM altivec intrinsics
+-----------
+For questions: please open issues. I try my best to solve them in a decent amount of time.
+
+Note: I have no connection to Przemyslaw and therefore will **NOT** receive anything of the donations
+
+-----------
+
+*following now: the original readme of [https://github.com/edanor/umesimd](https://github.com/edanor/umesimd)*
 
 **NOTE**: UME::Vector library has been moved to github! Please see: [https://github.com/edanor/umevector](https://github.com/edanor/umevector)
 
